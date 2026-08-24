@@ -729,231 +729,195 @@ if selected_movie_id is not None:
     # RECOMMEND BUTTON
     # ========================================================
 
-    recommend_clicked = st.button(
-        "✨ Recommend Top 10 Movies",
-        type="primary",
-        use_container_width=True
-    )
+    st.session_state.recommend_clicked
 
 
-    # ========================================================
-    # RECOMMENDATIONS
-    # ========================================================
+# ============================================================
+# RECOMMENDATIONS
+# ============================================================
 
- if (
+if (
     selected_movie is not None
     and st.session_state.recommend_clicked
 ):
 
-        with st.spinner(
-            "Generating recommendations..."
-        ):
+    with st.spinner("Generating recommendations..."):
 
-            if method == "🤝 Collaborative Filtering":
+        if method == "🤝 Collaborative Filtering":
 
-                recommendations = recommend_cf(
-                    selected_movie_id,
-                    n=10
-                )
-
-            else:
-
-                recommendations = recommend_content(
-                    selected_movie_id,
-                    n=10
-                )
-
-
-        if recommendations.empty:
-
-            st.error(
-                "We could not generate recommendations "
-                "for this movie."
+            recommendations = recommend_cf(
+                selected_movie_id,
+                n=10
             )
 
         else:
 
-            st.success(
-                "10 recommendations generated."
+            recommendations = recommend_content(
+                selected_movie_id,
+                n=10
             )
 
+    if recommendations.empty:
+
+        st.error(
+            "We could not generate recommendations for this movie."
+        )
+
+    else:
+
+        st.success("10 recommendations generated.")
+
+        st.markdown(
+            '<div class="section-title">'
+            '✨ Recommended Movies'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+        # ====================================================
+        # RECOMMENDATION CARDS
+        # ====================================================
+
+        for rank, (_, movie) in enumerate(
+            recommendations.iterrows(),
+            start=1
+        ):
+
+            movie_id = movie["movieId"]
+            movie_title = movie["title"]
+            genres = movie["genres"]
+            tmdb_id = movie["tmdbId"]
+
+            # ------------------------------------------------
+            # TMDB INFORMATION
+            # ------------------------------------------------
+
+            tmdb_movie = get_tmdb_movie(tmdb_id)
+
+            poster_url = None
+            overview = None
+
+            if tmdb_movie:
+
+                poster_url = get_poster_url(
+                    tmdb_movie.get("poster_path")
+                )
+
+                overview = tmdb_movie.get("overview")
+
+            # ------------------------------------------------
+            # CARD
+            # ------------------------------------------------
+
             st.markdown(
-                '<div class="section-title">'
-                '✨ Recommended Movies'
-                '</div>',
+                '<div class="recommendation-card">',
                 unsafe_allow_html=True
             )
 
+            col1, col2, col3 = st.columns(
+                [1.2, 5, 1.5]
+            )
 
-            # ==================================================
-            # RECOMMENDATION CARDS
-            # ==================================================
+            # ------------------------------------------------
+            # POSTER
+            # ------------------------------------------------
 
-            for rank, (_, movie) in enumerate(
-                recommendations.iterrows(),
-                start=1
-            ):
+            with col1:
 
-                movie_title = movie["title"]
+                if poster_url:
 
-                genres = movie["genres"]
-
-                tmdb_id = movie["tmdbId"]
-
-
-                # ----------------------------------------------
-                # TMDB INFORMATION
-                # ----------------------------------------------
-
-                tmdb_movie = get_tmdb_movie(
-                    tmdb_id
-                )
-
-
-                poster_url = None
-
-                overview = None
-
-
-                if tmdb_movie:
-
-                    poster_url = (
-                        get_poster_url(
-                            tmdb_movie.get(
-                                "poster_path"
-                            )
-                        )
+                    st.image(
+                        poster_url,
+                        width=120
                     )
 
-                    overview = (
-                        tmdb_movie.get(
-                            "overview"
-                        )
+                else:
+
+                    st.markdown(
+                        "🎬\n\n"
+                        "**Poster unavailable**"
                     )
 
+            # ------------------------------------------------
+            # MOVIE INFORMATION
+            # ------------------------------------------------
 
-                # ----------------------------------------------
-                # CARD
-                # ----------------------------------------------
+            with col2:
 
                 st.markdown(
-                    '<div class="recommendation-card">',
+                    f"""
+                    <div class="rank">
+                        #{rank}
+                    </div>
+
+                    <div class="recommendation-title">
+                        {movie_title}
+                    </div>
+
+                    <div class="recommendation-genres">
+                        {genres}
+                    </div>
+                    """,
                     unsafe_allow_html=True
                 )
 
+                if overview:
 
-                col1, col2, col3 = st.columns(
-                    [1.2, 5, 1.5]
-                )
-
-
-                # ----------------------------------------------
-                # POSTER
-                # ----------------------------------------------
-
-                with col1:
-
-                    if poster_url:
-
-                        st.image(
-                            poster_url,
-                            width=120
-                        )
-
-                    else:
-
-                        st.markdown(
-                            "🎬\n\n"
-                            "**Poster unavailable**"
-                        )
-
-
-                # ----------------------------------------------
-                # MOVIE INFORMATION
-                # ----------------------------------------------
-
-                with col2:
+                    short_description = (
+                        overview[:220] + "..."
+                        if len(overview) > 220
+                        else overview
+                    )
 
                     st.markdown(
                         f"""
-                        <div class="rank">
-                            #{rank}
-                        </div>
-
-                        <div class="recommendation-title">
-                            {movie_title}
-                        </div>
-
-                        <div class="recommendation-genres">
-                            {genres}
+                        <div class="recommendation-description">
+                            {short_description}
                         </div>
                         """,
                         unsafe_allow_html=True
                     )
 
+                else:
 
-                    if overview:
-
-                        short_description = (
-                            overview[:220]
-                            + "..."
-                            if len(overview) > 220
-                            else overview
-                        )
-
-                        st.markdown(
-                            f"""
-                            <div class="recommendation-description">
-                                {short_description}
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
-
-                    else:
-
-                        st.markdown(
-                            """
-                            <div class="recommendation-description">
-                                Movie description is unavailable.
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
-
-
-                # ----------------------------------------------
-                # DETAILS BUTTON
-                # ----------------------------------------------
-
-                with col3:
-
-                    st.write("")
-
-                    details_key = (
-                        f"details_"
-                        f"{method}_"
-                        f"{movie['movieId']}"
+                    st.markdown(
+                        """
+                        <div class="recommendation-description">
+                            Movie description is unavailable.
+                        </div>
+                        """,
+                        unsafe_allow_html=True
                     )
 
+            # ------------------------------------------------
+            # VIEW DETAILS
+            # ------------------------------------------------
 
-                    if st.button(
-    "View Details",
-    key=details_key,
-    use_container_width=True
-):
+            with col3:
 
-    st.session_state.details_movie_id = int(
-        movie["movieId"]
-    )
+                st.write("")
 
-    st.rerun()
-
-
-                st.markdown(
-                    '</div>',
-                    unsafe_allow_html=True
+                details_key = (
+                    f"details_{method}_{movie_id}"
                 )
+
+                if st.button(
+                    "View Details",
+                    key=details_key,
+                    use_container_width=True
+                ):
+
+                    st.session_state.details_movie_id = int(
+                        movie_id
+                    )
+
+                    st.rerun()
+
+            st.markdown(
+                '</div>',
+                unsafe_allow_html=True
+            )
+
 
 # ============================================================
 # MOVIE DETAILS DIALOG
@@ -1043,8 +1007,7 @@ if st.session_state.details_movie_id is not None:
                 )
 
                 st.info(
-                    "Additional movie details "
-                    "are currently unavailable."
+                    "Additional movie details are currently unavailable."
                 )
 
             if st.button(
@@ -1057,8 +1020,8 @@ if st.session_state.details_movie_id is not None:
 
                 st.rerun()
 
-
         show_movie_details()
+        
 # ============================================================
 # FOOTER
 # ============================================================
