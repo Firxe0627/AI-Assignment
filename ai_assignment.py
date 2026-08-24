@@ -175,6 +175,9 @@ if "selected_movie_title" not in st.session_state:
 if "details_movie_id" not in st.session_state:
     st.session_state.details_movie_id = None
 
+if "recommend_clicked" not in st.session_state:
+    st.session_state.recommend_clicked = False
+
 
 # ============================================================
 # LOAD MODEL
@@ -617,103 +620,110 @@ st.divider()
 # ============================================================
 
 st.markdown(
-    '<div class="section-title">'
-    '🔎 Find a Movie'
-    '</div>',
+    '<div class="section-title">🔎 Find a Movie</div>',
     unsafe_allow_html=True
 )
 
 search_text = st.text_input(
-    "Movie title",
-    placeholder=(
-        "Search for a movie, e.g. Spider-Man, "
-        "Toy Story, Titanic..."
-    ),
-    label_visibility="collapsed"
+    "Search movie",
+    placeholder="Start typing a movie title...",
+    label_visibility="collapsed",
+    key="movie_search"
 )
+
+matching_movies = search_movies(search_text)
 
 
 # ============================================================
-# SEARCH RESULTS
+# LIVE SEARCH RESULTS
 # ============================================================
 
-matching_movies = search_movies(
-    search_text
-)
-
-
-if search_text:
+if search_text.strip():
 
     if matching_movies.empty:
 
-        st.warning(
-            "No movies found. "
-            "Try a different title or spelling."
+        st.info(
+            "No movies found. Try another title."
         )
 
     else:
 
         st.caption(
-            f"{len(matching_movies)} movie(s) found"
+            f"{len(matching_movies)} matching movie(s)"
         )
 
+        for _, movie in matching_movies.iterrows():
+
+            movie_id = movie["movieId"]
+            movie_title = movie["title"]
+
+            if st.button(
+                f"🎬 {movie_title}",
+                key=f"search_movie_{movie_id}",
+                use_container_width=True
+            ):
+
+                st.session_state.selected_movie_id = movie_id
+                st.session_state.selected_movie_title = movie_title
+                st.session_state.recommend_clicked = False
+
+                st.rerun()
+
 
 # ============================================================
-# MOVIE SELECTION
+# SELECTED MOVIE
 # ============================================================
 
-if not matching_movies.empty:
+selected_movie_id = (
+    st.session_state.selected_movie_id
+)
 
-    movie_options = {}
+selected_movie = None
 
-    for _, row in matching_movies.iterrows():
 
-        movie_options[
-            f"{row['title']}"
-        ] = row["movieId"]
+if selected_movie_id is not None:
 
-    selected_title = st.selectbox(
-        "Select a movie",
-        list(movie_options.keys())
-    )
-
-    selected_movie_id = movie_options[
-        selected_title
+    selected_matches = movie_metadata[
+        movie_metadata["movieId"] == selected_movie_id
     ]
 
-    selected_movie = matching_movies[
-        matching_movies["movieId"]
-        == selected_movie_id
-    ].iloc[0]
+    if not selected_matches.empty:
 
+        selected_movie = selected_matches.iloc[0]
 
-    # ========================================================
-    # SELECTED MOVIE CARD
-    # ========================================================
+        st.markdown(
+            '<div class="selected-card">',
+            unsafe_allow_html=True
+        )
 
-    st.markdown(
-        '<div class="selected-card">',
-        unsafe_allow_html=True
-    )
+        st.markdown(
+            f"""
+            <div class="selected-title">
+                🎬 {selected_movie['title']}
+            </div>
 
-    st.markdown(
-        f"""
-        <div class="selected-title">
-            🎬 {selected_movie['title']}
-        </div>
+            <div class="selected-genres">
+                {selected_movie['genres']}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
-        <div class="selected-genres">
-            {selected_movie['genres']}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+        st.markdown(
+            '</div>',
+            unsafe_allow_html=True
+        )
 
-    st.markdown(
-        '</div>',
-        unsafe_allow_html=True
-    )
+        if st.button(
+            "✨ Recommend Top 10 Movies",
+            type="primary",
+            use_container_width=True,
+            key="recommend_button"
+        ):
 
+            st.session_state.recommend_clicked = True
+
+            st.rerun()
 
     # ========================================================
     # RECOMMEND BUTTON
@@ -730,7 +740,10 @@ if not matching_movies.empty:
     # RECOMMENDATIONS
     # ========================================================
 
-    if recommend_clicked:
+ if (
+    selected_movie is not None
+    and st.session_state.recommend_clicked
+):
 
         with st.spinner(
             "Generating recommendations..."
@@ -925,77 +938,16 @@ if not matching_movies.empty:
 
 
                     if st.button(
-                        "View Details",
-                        key=details_key,
-                        use_container_width=True
-                    ):
+    "View Details",
+    key=details_key,
+    use_container_width=True
+):
 
-                        @st.dialog(
-                            movie_title
-                        )
-                        def show_movie_details():
+    st.session_state.details_movie_id = int(
+        movie["movieId"]
+    )
 
-                            tmdb_details = (
-                                get_tmdb_movie(
-                                    tmdb_id
-                                )
-                            )
-
-                            if tmdb_details:
-
-                                poster = (
-                                    get_poster_url(
-                                        tmdb_details.get(
-                                            "poster_path"
-                                        )
-                                    )
-                                )
-
-                                if poster:
-
-                                    st.image(
-                                        poster,
-                                        use_container_width=True
-                                    )
-
-                                st.subheader(
-                                    tmdb_details.get(
-                                        "title",
-                                        movie_title
-                                    )
-                                )
-
-                                st.caption(
-                                    tmdb_details.get(
-                                        "release_date",
-                                        ""
-                                    )
-                                )
-
-                                st.write(
-                                    tmdb_details.get(
-                                        "overview",
-                                        "Description unavailable."
-                                    )
-                                )
-
-                            else:
-
-                                st.subheader(
-                                    movie_title
-                                )
-
-                                st.write(
-                                    f"Genres: {genres}"
-                                )
-
-                                st.info(
-                                    "Additional movie details "
-                                    "are currently unavailable."
-                                )
-
-
-                        show_movie_details()
+    st.rerun()
 
 
                 st.markdown(
@@ -1003,7 +955,110 @@ if not matching_movies.empty:
                     unsafe_allow_html=True
                 )
 
+# ============================================================
+# MOVIE DETAILS DIALOG
+# ============================================================
 
+if st.session_state.details_movie_id is not None:
+
+    details_movie_id = (
+        st.session_state.details_movie_id
+    )
+
+    details_matches = movie_metadata[
+        movie_metadata["movieId"] == details_movie_id
+    ]
+
+    if not details_matches.empty:
+
+        details_movie = details_matches.iloc[0]
+
+        details_tmdb_id = details_movie["tmdbId"]
+
+        @st.dialog("Movie Details")
+        def show_movie_details():
+
+            tmdb_details = get_tmdb_movie(
+                details_tmdb_id
+            )
+
+            if tmdb_details:
+
+                poster = get_poster_url(
+                    tmdb_details.get("poster_path")
+                )
+
+                if poster:
+
+                    st.image(
+                        poster,
+                        use_container_width=True
+                    )
+
+                st.subheader(
+                    tmdb_details.get(
+                        "title",
+                        details_movie["title"]
+                    )
+                )
+
+                release_date = tmdb_details.get(
+                    "release_date",
+                    ""
+                )
+
+                if release_date:
+
+                    st.caption(
+                        f"Release Date: {release_date}"
+                    )
+
+                st.write(
+                    f"Genres: {details_movie['genres']}"
+                )
+
+                overview = tmdb_details.get(
+                    "overview",
+                    ""
+                )
+
+                if overview:
+
+                    st.write(overview)
+
+                else:
+
+                    st.info(
+                        "Description unavailable."
+                    )
+
+            else:
+
+                st.subheader(
+                    details_movie["title"]
+                )
+
+                st.write(
+                    f"Genres: {details_movie['genres']}"
+                )
+
+                st.info(
+                    "Additional movie details "
+                    "are currently unavailable."
+                )
+
+            if st.button(
+                "Close",
+                use_container_width=True,
+                key="close_movie_details"
+            ):
+
+                st.session_state.details_movie_id = None
+
+                st.rerun()
+
+
+        show_movie_details()
 # ============================================================
 # FOOTER
 # ============================================================
