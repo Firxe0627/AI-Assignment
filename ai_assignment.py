@@ -152,19 +152,15 @@ st.markdown("""
 # HEADER
 # ============================================================
 
-st.markdown("""
+st.markdown(
+    """
 <div class="hero">
-
-    <div class="hero-title">
-        🎬 Movie Recommendation System
-    </div>
-
-    <div class="hero-subtitle">
-        Discover movies using intelligent recommendation techniques
-    </div>
-
+<div class="hero-title">🎬 Movie Recommendation System</div>
+<div class="hero-subtitle">Discover movies using intelligent recommendation techniques</div>
 </div>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True
+)
 
 
 # ============================================================
