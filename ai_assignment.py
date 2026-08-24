@@ -162,6 +162,19 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# ============================================================
+# SESSION STATE
+# ============================================================
+
+if "selected_movie_id" not in st.session_state:
+    st.session_state.selected_movie_id = None
+
+if "selected_movie_title" not in st.session_state:
+    st.session_state.selected_movie_title = None
+
+if "details_movie_id" not in st.session_state:
+    st.session_state.details_movie_id = None
+
 
 # ============================================================
 # LOAD MODEL
