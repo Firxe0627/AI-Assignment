@@ -630,14 +630,17 @@ search_text = st.text_input(
     key="movie_search"
 )
 
-# Live search
-matching_movies = search_movies(search_text)
+# ============================================================
+# LIVE SEARCH RESULTS
+# ============================================================
 
 if search_text.strip():
 
     if matching_movies.empty:
 
-        st.info("No movies found. Try another title.")
+        st.info(
+            "No movies found. Try another title."
+        )
 
     else:
 
@@ -645,61 +648,46 @@ if search_text.strip():
             f"{len(matching_movies)} movie(s) found"
         )
 
-        # Search suggestion list
         for _, movie in matching_movies.iterrows():
 
             movie_id = int(movie["movieId"])
-            movie_title = movie["title"]
-            genres = movie.get("genres", "")
+            movie_title = str(movie["title"])
+            genres = str(movie.get("genres", ""))
 
-            # Create a compact suggestion card
-            col1, col2 = st.columns([8, 1])
+            # Movie suggestion container
+            with st.container(border=True):
 
-            with col1:
-
-                st.markdown(
-                    f"""
-                    <div style="
-                        padding: 10px 14px;
-                        margin-bottom: 4px;
-                        border-radius: 8px;
-                        background: #151820;
-                        border: 1px solid #252b36;
-                    ">
-                        <div style="
-                            font-size: 16px;
-                            font-weight: 600;
-                        ">
-                            🎬 {movie_title}
-                        </div>
-
-                        <div style="
-                            color: #8f96a3;
-                            font-size: 12px;
-                            margin-top: 3px;
-                        ">
-                            {genres}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
+                col1, col2 = st.columns(
+                    [7, 1]
                 )
 
-            with col2:
+                with col1:
 
-                if st.button(
-                    "Select",
-                    key=f"select_movie_{movie_id}",
-                    use_container_width=True
-                ):
+                    st.markdown(
+                        f"**🎬 {movie_title}**"
+                    )
 
-                    st.session_state.selected_movie_id = movie_id
-                    st.session_state.selected_movie_title = movie_title
+                    if genres and genres != "nan":
 
-                    # Reset recommendation state
-                    st.session_state.recommend_clicked = False
+                        st.caption(
+                            genres.replace("|", " • ")
+                        )
 
-                    st.rerun()
+                with col2:
+
+                    if st.button(
+                        "Select",
+                        key=f"search_select_{movie_id}",
+                        use_container_width=True
+                    ):
+
+                        st.session_state.selected_movie_id = movie_id
+
+                        st.session_state.selected_movie_title = movie_title
+
+                        st.session_state.recommend_clicked = False
+
+                        st.rerun()
 
 # ============================================================
 # SELECTED MOVIE
