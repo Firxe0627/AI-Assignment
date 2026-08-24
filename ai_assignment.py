@@ -253,18 +253,40 @@ except Exception:
 
 
 # ============================================================
-# TMDB API FUNCTION
+# TMDB CONFIGURATION
+# ============================================================
+
+TMDB_TOKEN = None
+
+try:
+    TMDB_TOKEN = st.secrets["TMDB_TOKEN"]
+except Exception:
+    TMDB_TOKEN = None
+
+
+# ============================================================
+# TMDB REQUEST HEADERS
+# ============================================================
+
+def tmdb_headers():
+
+    return {
+        "Authorization": f"Bearer {TMDB_TOKEN}",
+        "accept": "application/json"
+    }
+
+
+# ============================================================
+# GET MOVIE BY TMDB ID
 # ============================================================
 
 @st.cache_data(show_spinner=False)
 def get_tmdb_movie(tmdb_id):
 
-    if pd.isna(tmdb_id):
-
+    if TMDB_TOKEN is None:
         return None
 
-    if TMDB_TOKEN is None:
-
+    if pd.isna(tmdb_id):
         return None
 
     try:
@@ -274,26 +296,141 @@ def get_tmdb_movie(tmdb_id):
             f"{int(tmdb_id)}"
         )
 
-        headers = {
-            "Authorization": f"Bearer {TMDB_TOKEN}",
-            "accept": "application/json"
+        response = requests.get(
+            url,
+            headers=tmdb_headers(),
+            timeout=10
+        )
+
+        if response.status_code == 200:
+
+            return response.json()
+
+    except Exception:
+        pass
+
+    return None
+
+
+# ============================================================
+# SEARCH MOVIE ON TMDB
+# ============================================================
+
+@st.cache_data(show_spinner=False)
+def search_tmdb_movie(title, year=None):
+
+    if TMDB_TOKEN is None:
+        return None
+
+    try:
+
+        url = (
+            "https://api.themoviedb.org/3/search/movie"
+        )
+
+        params = {
+            "query": title,
+            "include_adult": "false",
+            "language": "en-US"
         }
+
+        # Add year if available
+        if year is not None:
+
+            try:
+                params["year"] = int(year)
+            except Exception:
+                pass
 
         response = requests.get(
             url,
-            headers=headers,
+            headers=tmdb_headers(),
+            params=params,
             timeout=10
         )
 
         if response.status_code != 200:
-
             return None
 
-        return response.json()
+        data = response.json()
+
+        results = data.get(
+            "results",
+            []
+        )
+
+        if not results:
+            return None
+
+        # Return the first matching result
+        return results[0]
 
     except Exception:
-
         return None
+
+
+# ============================================================
+# GET MOVIE INFORMATION WITH FALLBACK
+# ============================================================
+
+def get_movie_information(
+    tmdb_id,
+    title
+):
+
+    # --------------------------------------------------------
+    # Method 1: TMDB ID
+    # --------------------------------------------------------
+
+    movie = get_tmdb_movie(
+        tmdb_id
+    )
+
+    if movie is not None:
+        return movie
+
+
+    # --------------------------------------------------------
+    # Method 2: TMDB title search
+    # --------------------------------------------------------
+
+    year = None
+
+    try:
+
+        title_string = str(title)
+
+        if "(" in title_string and ")" in title_string:
+
+            year_text = title_string[
+                title_string.rfind("(") + 1:
+                title_string.rfind(")")
+            ]
+
+            if year_text.isdigit():
+
+                year = int(year_text)
+
+    except Exception:
+        pass
+
+
+    # Remove year from title
+    clean_title = str(title)
+
+    if year is not None:
+
+        clean_title = clean_title[
+            :clean_title.rfind("(")
+        ].strip()
+
+
+    movie = search_tmdb_movie(
+        clean_title,
+        year
+    )
+
+    return movie
 
 
 # ============================================================
@@ -303,7 +440,6 @@ def get_tmdb_movie(tmdb_id):
 def get_poster_url(poster_path):
 
     if not poster_path:
-
         return None
 
     return (
@@ -558,8 +694,9 @@ if not matching_movies.empty:
 
 
                 # Get TMDB information
-                tmdb_movie = get_tmdb_movie(
-                    tmdb_id
+                tmdb_movie = get_movie_information(
+                    tmdb_id,
+                    movie_title
                 )
 
 
