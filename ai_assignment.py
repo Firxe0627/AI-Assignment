@@ -4,7 +4,7 @@ import numpy as np
 import pickle
 import requests
 import html
-
+import os
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from streamlit_searchbox import st_searchbox
@@ -170,8 +170,24 @@ if "details_movie_id" not in st.session_state:
 # ============================================================
 # LOAD COLLABORATIVE FILTERING MODEL
 # ============================================================
+def get_model_version():
 
-def load_cf_model():
+    model_files = [
+        "models/item_distances.npy",
+        "models/item_indices.npy",
+        "models/movie_to_index.pkl",
+        "models/index_to_movie.pkl",
+        "models/movie_metadata.csv"
+    ]
+
+    return tuple(
+        os.path.getmtime(file)
+        for file in model_files
+    )
+
+
+@st.cache_resource
+def load_cf_model(model_version):
 
     item_distances = np.load(
         "models/item_distances.npy"
@@ -214,7 +230,9 @@ try:
         movie_to_index,
         index_to_movie,
         movie_metadata
-    ) = load_cf_model()
+    ) = load_cf_model(
+        get_model_version()
+    )
 
 except Exception as e:
 
@@ -223,8 +241,6 @@ except Exception as e:
     )
 
     st.stop()
-
-
 # ============================================================
 # LOAD LINKS
 # ============================================================
