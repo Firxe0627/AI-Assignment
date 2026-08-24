@@ -171,7 +171,6 @@ if "details_movie_id" not in st.session_state:
 # LOAD COLLABORATIVE FILTERING MODEL
 # ============================================================
 
-@st.cache_resource
 def load_cf_model():
 
     item_distances = np.load(
