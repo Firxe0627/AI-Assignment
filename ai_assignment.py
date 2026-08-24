@@ -3,8 +3,6 @@ import pandas as pd
 import numpy as np
 import pickle
 import requests
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
 
 # ============================================================
@@ -14,8 +12,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 st.set_page_config(
     page_title="Movie Recommendation System",
     page_icon="🎬",
-    layout="wide",
-    initial_sidebar_state="collapsed"
+    layout="wide"
 )
 
 
@@ -26,154 +23,78 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-    /* ---------- Main page ---------- */
+.main-title {
+    font-size: 42px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
 
-    .main {
-        padding-top: 1rem;
-    }
+.subtitle {
+    font-size: 18px;
+    color: #aaaaaa;
+    margin-bottom: 30px;
+}
 
-    .hero {
-        padding: 30px 0 20px 0;
-    }
+.movie-card {
+    padding: 15px;
+    border-radius: 10px;
+    background-color: #16191f;
+    margin-bottom: 20px;
+}
 
-    .hero-title {
-        font-size: 42px;
-        font-weight: 750;
-        letter-spacing: -1px;
-        margin-bottom: 5px;
-    }
+.similarity {
+    font-size: 22px;
+    font-weight: 600;
+}
 
-    .hero-subtitle {
-        font-size: 17px;
-        color: #a7adb8;
-        margin-bottom: 5px;
-    }
+.movie-title {
+    font-size: 22px;
+    font-weight: 600;
+}
 
-    .section-title {
-        font-size: 25px;
-        font-weight: 700;
-        margin-top: 15px;
-        margin-bottom: 12px;
-    }
+.genre {
+    color: #aaaaaa;
+    font-size: 14px;
+}
 
-    /* ---------- Method cards ---------- */
-
-    .method-description {
-        color: #9da3ae;
-        font-size: 14px;
-        margin-top: -5px;
-        margin-bottom: 15px;
-    }
-
-    /* ---------- Selected movie ---------- */
-
-    .selected-card {
-        background: linear-gradient(
-            135deg,
-            #151922,
-            #1c2330
-        );
-        border: 1px solid #2c3442;
-        border-radius: 14px;
-        padding: 20px;
-        margin-top: 10px;
-        margin-bottom: 20px;
-    }
-
-    .selected-title {
-        font-size: 24px;
-        font-weight: 700;
-        margin-bottom: 6px;
-    }
-
-    .selected-genres {
-        color: #9da3ae;
-        font-size: 14px;
-    }
-
-    /* ---------- Recommendation cards ---------- */
-
-    .recommendation-card {
-        background: #151820;
-        border: 1px solid #252b36;
-        border-radius: 14px;
-        padding: 16px;
-        margin-bottom: 15px;
-    }
-
-    .recommendation-title {
-        font-size: 21px;
-        font-weight: 700;
-        margin-bottom: 5px;
-    }
-
-    .recommendation-genres {
-        color: #9da3ae;
-        font-size: 13px;
-        margin-bottom: 8px;
-    }
-
-    .recommendation-description {
-        color: #c5c9d0;
-        font-size: 14px;
-        line-height: 1.5;
-    }
-
-    .rank {
-        font-size: 18px;
-        font-weight: 700;
-        color: #ff4b4b;
-    }
-
-    /* ---------- Info ---------- */
-
-    .info-box {
-        background: #131720;
-        border: 1px solid #282f3a;
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 15px;
-    }
-
-    /* ---------- Footer ---------- */
-
-    .footer {
-        text-align: center;
-        color: #747b87;
-        font-size: 13px;
-        padding: 30px 0 10px 0;
-    }
+.description {
+    color: #cccccc;
+    font-size: 15px;
+    line-height: 1.5;
+}
 
 </style>
 """, unsafe_allow_html=True)
 
 
 # ============================================================
-# HEADER
+# TITLE
 # ============================================================
 
-st.markdown("""
-<div class="hero">
+st.markdown(
+    '<div class="main-title">🎬 Movie Recommendation System</div>',
+    unsafe_allow_html=True
+)
 
-    <div class="hero-title">
-        🎬 Movie Recommendation System
-    </div>
+st.markdown(
+    '<div class="subtitle">Item-Based Collaborative Filtering</div>',
+    unsafe_allow_html=True
+)
 
-    <div class="hero-subtitle">
-        Discover movies using intelligent recommendation techniques
-    </div>
-
-</div>
-""", unsafe_allow_html=True)
+st.write(
+    "Enter a movie title and the system will recommend similar movies "
+    "using Item-Based Collaborative Filtering."
+)
 
 
 # ============================================================
-# LOAD MODEL
+# LOAD MODEL FILES
 # ============================================================
 
 @st.cache_resource
-def load_cf_model():
+def load_model():
 
+    # Item similarity information
     item_distances = np.load(
         "models/item_distances.npy"
     )
@@ -182,18 +103,21 @@ def load_cf_model():
         "models/item_indices.npy"
     )
 
+    # Movie ID -> matrix index
     with open(
         "models/movie_to_index.pkl",
         "rb"
     ) as f:
         movie_to_index = pickle.load(f)
 
+    # Matrix index -> Movie ID
     with open(
         "models/index_to_movie.pkl",
         "rb"
     ) as f:
         index_to_movie = pickle.load(f)
 
+    # Movie metadata
     movie_metadata = pd.read_csv(
         "models/movie_metadata.csv"
     )
@@ -215,9 +139,13 @@ try:
         movie_to_index,
         index_to_movie,
         movie_metadata
-    ) = load_cf_model()
+    ) = load_model()
+
+    model_loaded = True
 
 except Exception as e:
+
+    model_loaded = False
 
     st.error(
         f"Unable to load recommendation model: {e}"
@@ -227,7 +155,7 @@ except Exception as e:
 
 
 # ============================================================
-# LOAD LINKS
+# LOAD LINKS.CSV
 # ============================================================
 
 @st.cache_data
@@ -237,6 +165,7 @@ def load_links():
         "data/links.csv"
     )
 
+    # Make sure IDs are numeric
     links["movieId"] = pd.to_numeric(
         links["movieId"],
         errors="coerce"
@@ -254,25 +183,62 @@ links = load_links()
 
 
 # ============================================================
-# ADD TMDB ID
+# ADD TMDB ID TO MOVIE METADATA
 # ============================================================
+
+# Avoid duplicate tmdbId if metadata already contains it
 
 if "tmdbId" not in movie_metadata.columns:
 
     movie_metadata = movie_metadata.merge(
-        links[
-            [
-                "movieId",
-                "tmdbId"
-            ]
-        ],
+        links[["movieId", "tmdbId"]],
         on="movieId",
         how="left"
     )
 
 
 # ============================================================
-# TMDB TOKEN
+# MODEL STATUS
+# ============================================================
+
+st.success(
+    "✅ Recommendation model loaded successfully"
+)
+
+
+# ============================================================
+# MODEL STATISTICS
+# ============================================================
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+
+    st.metric(
+        "Movies",
+        len(movie_to_index)
+    )
+
+with col2:
+
+    st.metric(
+        "Users",
+        128075
+    )
+
+with col3:
+
+    st.metric(
+        "Recommendation Method",
+        "Item-Based CF"
+    )
+
+
+st.divider()
+
+
+# ============================================================
+# TMDB CONFIGURATION
 # ============================================================
 
 TMDB_TOKEN = None
@@ -287,16 +253,71 @@ except Exception:
 
 
 # ============================================================
-# TMDB API
+# TMDB CONFIGURATION
 # ============================================================
 
-@st.cache_data(
-    show_spinner=False
-)
+TMDB_TOKEN = None
+
+try:
+    TMDB_TOKEN = st.secrets["TMDB_TOKEN"]
+except Exception:
+    TMDB_TOKEN = None
+
+
+# ============================================================
+# TMDB REQUEST HEADERS
+# ============================================================
+
+def tmdb_headers():
+
+    return {
+        "Authorization": f"Bearer {TMDB_TOKEN}",
+        "accept": "application/json"
+    }
+
+
+# ============================================================
+# GET MOVIE BY TMDB ID
+# ============================================================
+
+@st.cache_data(show_spinner=False)
 def get_tmdb_movie(tmdb_id):
+
+    if TMDB_TOKEN is None:
+        return None
 
     if pd.isna(tmdb_id):
         return None
+
+    try:
+
+        url = (
+            f"https://api.themoviedb.org/3/movie/"
+            f"{int(tmdb_id)}"
+        )
+
+        response = requests.get(
+            url,
+            headers=tmdb_headers(),
+            timeout=10
+        )
+
+        if response.status_code == 200:
+
+            return response.json()
+
+    except Exception:
+        pass
+
+    return None
+
+
+# ============================================================
+# SEARCH MOVIE ON TMDB
+# ============================================================
+
+@st.cache_data(show_spinner=False)
+def search_tmdb_movie(title, year=None):
 
     if TMDB_TOKEN is None:
         return None
@@ -304,39 +325,119 @@ def get_tmdb_movie(tmdb_id):
     try:
 
         url = (
-            "https://api.themoviedb.org/3/movie/"
-            f"{int(tmdb_id)}"
+            "https://api.themoviedb.org/3/search/movie"
         )
 
-        headers = {
-            "Authorization":
-                f"Bearer {TMDB_TOKEN}",
-            "accept": "application/json"
+        params = {
+            "query": title,
+            "include_adult": "false",
+            "language": "en-US"
         }
+
+        # Add year if available
+        if year is not None:
+
+            try:
+                params["year"] = int(year)
+            except Exception:
+                pass
 
         response = requests.get(
             url,
-            headers=headers,
+            headers=tmdb_headers(),
+            params=params,
             timeout=10
         )
 
         if response.status_code != 200:
             return None
 
-        return response.json()
+        data = response.json()
+
+        results = data.get(
+            "results",
+            []
+        )
+
+        if not results:
+            return None
+
+        # Return the first matching result
+        return results[0]
 
     except Exception:
-
         return None
 
 
 # ============================================================
-# POSTER
+# GET MOVIE INFORMATION WITH FALLBACK
 # ============================================================
 
-def get_poster_url(
-    poster_path
+def get_movie_information(
+    tmdb_id,
+    title
 ):
+
+    # --------------------------------------------------------
+    # Method 1: TMDB ID
+    # --------------------------------------------------------
+
+    movie = get_tmdb_movie(
+        tmdb_id
+    )
+
+    if movie is not None:
+        return movie
+
+
+    # --------------------------------------------------------
+    # Method 2: TMDB title search
+    # --------------------------------------------------------
+
+    year = None
+
+    try:
+
+        title_string = str(title)
+
+        if "(" in title_string and ")" in title_string:
+
+            year_text = title_string[
+                title_string.rfind("(") + 1:
+                title_string.rfind(")")
+            ]
+
+            if year_text.isdigit():
+
+                year = int(year_text)
+
+    except Exception:
+        pass
+
+
+    # Remove year from title
+    clean_title = str(title)
+
+    if year is not None:
+
+        clean_title = clean_title[
+            :clean_title.rfind("(")
+        ].strip()
+
+
+    movie = search_tmdb_movie(
+        clean_title,
+        year
+    )
+
+    return movie
+
+
+# ============================================================
+# POSTER URL
+# ============================================================
+
+def get_poster_url(poster_path):
 
     if not poster_path:
         return None
@@ -348,21 +449,16 @@ def get_poster_url(
 
 
 # ============================================================
-# SEARCH MOVIES
+# FIND MOVIES
 # ============================================================
 
-def search_movies(
-    search_text
-):
+def search_movies(search_text):
 
     if not search_text:
+
         return pd.DataFrame()
 
-    search_text = (
-        search_text
-        .strip()
-        .lower()
-    )
+    search_text = search_text.strip().lower()
 
     matches = movie_metadata[
         movie_metadata["title"]
@@ -379,22 +475,22 @@ def search_movies(
 
 
 # ============================================================
-# COLLABORATIVE FILTERING
+# ITEM-BASED RECOMMENDER
 # ============================================================
 
-def recommend_cf(
+def recommend_similar_movies(
     movie_id,
     n=10
 ):
 
+    # Check movie exists
     if movie_id not in movie_to_index:
 
         return pd.DataFrame()
 
-    movie_index = movie_to_index[
-        movie_id
-    ]
+    movie_index = movie_to_index[movie_id]
 
+    # Get precomputed similar movies
     distances = item_distances[
         movie_index
     ]
@@ -410,32 +506,33 @@ def recommend_cf(
         indices
     ):
 
-        similar_index = int(
-            similar_index
-        )
+        similar_index = int(similar_index)
 
-        # Do not recommend selected movie
+        # Don't recommend the selected movie itself
         if similar_index == movie_index:
             continue
 
+        # Convert matrix index -> movieId
         try:
 
-            similar_movie_id = (
-                index_to_movie[
-                    similar_index
-                ]
-            )
+            similar_movie_id = index_to_movie[
+                similar_index
+            ]
 
         except Exception:
 
             continue
 
+        # Convert distance to similarity
+        similarity = 1 - float(distance)
+
         recommendations.append({
-            "movieId":
-                similar_movie_id
+            "movieId": similar_movie_id,
+            "similarity": similarity
         })
 
         if len(recommendations) >= n:
+
             break
 
     recommendations_df = pd.DataFrame(
@@ -443,8 +540,10 @@ def recommend_cf(
     )
 
     if recommendations_df.empty:
+
         return recommendations_df
 
+    # Add metadata
     recommendations_df = recommendations_df.merge(
         movie_metadata[
             [
@@ -462,165 +561,14 @@ def recommend_cf(
 
 
 # ============================================================
-# CONTENT-BASED FILTERING
-# ============================================================
-
-@st.cache_resource
-def build_content_model():
-
-    content_data = movie_metadata.copy()
-
-    content_data["genres"] = (
-        content_data["genres"]
-        .fillna("")
-        .astype(str)
-        .str.replace(
-            "|",
-            " ",
-            regex=False
-        )
-    )
-
-    vectorizer = TfidfVectorizer(
-        lowercase=True
-    )
-
-    genre_matrix = vectorizer.fit_transform(
-        content_data["genres"]
-    )
-
-    return (
-        content_data,
-        vectorizer,
-        genre_matrix
-    )
-
-
-content_data, content_vectorizer, content_matrix = (
-    build_content_model()
-)
-
-
-def recommend_content(
-    movie_id,
-    n=10
-):
-
-    matches = content_data[
-        content_data["movieId"]
-        == movie_id
-    ]
-
-    if matches.empty:
-        return pd.DataFrame()
-
-    movie_index = matches.index[0]
-
-    similarity_scores = cosine_similarity(
-        content_matrix[movie_index],
-        content_matrix
-    ).flatten()
-
-    ranked_indices = (
-        similarity_scores
-        .argsort()[::-1]
-    )
-
-    recommendations = []
-
-    for index in ranked_indices:
-
-        if index == movie_index:
-            continue
-
-        recommendations.append(
-            content_data.iloc[index][
-                [
-                    "movieId",
-                    "title",
-                    "genres",
-                    "tmdbId"
-                ]
-            ]
-        )
-
-        if len(recommendations) >= n:
-            break
-
-    if not recommendations:
-        return pd.DataFrame()
-
-    return pd.DataFrame(
-        recommendations
-    )
-
-
-# ============================================================
-# METHOD SELECTION
-# ============================================================
-
-st.markdown(
-    '<div class="section-title">'
-    '🧠 Recommendation Method'
-    '</div>',
-    unsafe_allow_html=True
-)
-
-method = st.radio(
-    "Choose how recommendations should be generated:",
-    [
-        "🤝 Collaborative Filtering",
-        "🎯 Content-Based Filtering"
-    ],
-    horizontal=True
-)
-
-if method == "🤝 Collaborative Filtering":
-
-    st.markdown(
-        """
-        <div class="method-description">
-        Recommends movies based on relationships between
-        movies derived from user rating behaviour.
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-else:
-
-    st.markdown(
-        """
-        <div class="method-description">
-        Recommends movies with similar content characteristics,
-        using movie genres as the content representation.
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-
-st.divider()
-
-
-# ============================================================
 # SEARCH SECTION
 # ============================================================
 
-st.markdown(
-    '<div class="section-title">'
-    '🔎 Find a Movie'
-    '</div>',
-    unsafe_allow_html=True
-)
+st.header("🔎 Find a Movie")
 
 search_text = st.text_input(
-    "Movie title",
-    placeholder=(
-        "Search for a movie, e.g. Spider-Man, "
-        "Toy Story, Titanic..."
-    ),
-    label_visibility="collapsed"
+    "Enter movie name",
+    placeholder="e.g. Spider-Man, Toy Story, Titanic..."
 )
 
 
@@ -635,18 +583,9 @@ matching_movies = search_movies(
 
 if search_text:
 
-    if matching_movies.empty:
-
-        st.warning(
-            "No movies found. "
-            "Try a different title or spelling."
-        )
-
-    else:
-
-        st.caption(
-            f"{len(matching_movies)} movie(s) found"
-        )
+    st.write(
+        f"Found {len(matching_movies)} matching movie(s)."
+    )
 
 
 # ============================================================
@@ -678,31 +617,20 @@ if not matching_movies.empty:
     ].iloc[0]
 
 
-    # ========================================================
-    # SELECTED MOVIE CARD
-    # ========================================================
-
-    st.markdown(
-        '<div class="selected-card">',
-        unsafe_allow_html=True
+    st.info(
+        f"Selected: {selected_movie['title']}"
     )
 
-    st.markdown(
-        f"""
-        <div class="selected-title">
-            🎬 {selected_movie['title']}
-        </div>
 
-        <div class="selected-genres">
-            {selected_movie['genres']}
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    # ========================================================
+    # NUMBER OF RECOMMENDATIONS
+    # ========================================================
 
-    st.markdown(
-        '</div>',
-        unsafe_allow_html=True
+    number_of_recommendations = st.slider(
+        "Number of recommendations",
+        min_value=5,
+        max_value=20,
+        value=10
     )
 
 
@@ -710,61 +638,45 @@ if not matching_movies.empty:
     # RECOMMEND BUTTON
     # ========================================================
 
-    recommend_clicked = st.button(
-        "✨ Recommend Top 10 Movies",
-        type="primary",
-        use_container_width=True
-    )
-
-
-    # ========================================================
-    # RECOMMENDATIONS
-    # ========================================================
-
-    if recommend_clicked:
+    if st.button(
+        "🎯 Recommend Similar Movies",
+        type="primary"
+    ):
 
         with st.spinner(
-            "Generating recommendations..."
+            "Finding similar movies..."
         ):
 
-            if method == "🤝 Collaborative Filtering":
-
-                recommendations = recommend_cf(
-                    selected_movie_id,
-                    n=10
-                )
-
-            else:
-
-                recommendations = recommend_content(
-                    selected_movie_id,
-                    n=10
-                )
+            recommendations = recommend_similar_movies(
+                selected_movie_id,
+                number_of_recommendations
+            )
 
 
         if recommendations.empty:
 
             st.error(
-                "We could not generate recommendations "
-                "for this movie."
+                "No recommendations found for this movie."
             )
 
         else:
 
             st.success(
-                "10 recommendations generated."
-            )
-
-            st.markdown(
-                '<div class="section-title">'
-                '✨ Recommended Movies'
-                '</div>',
-                unsafe_allow_html=True
+                f"Found {len(recommendations)} similar movies."
             )
 
 
             # ==================================================
-            # RECOMMENDATION CARDS
+            # SELECTED MOVIE
+            # ==================================================
+
+            st.subheader(
+                f"🎬 Movies Similar to {selected_movie['title']}"
+            )
+
+
+            # ==================================================
+            # DISPLAY RECOMMENDATIONS
             # ==================================================
 
             for rank, (_, movie) in enumerate(
@@ -776,15 +688,15 @@ if not matching_movies.empty:
 
                 genres = movie["genres"]
 
+                similarity = movie["similarity"]
+
                 tmdb_id = movie["tmdbId"]
 
 
-                # ----------------------------------------------
-                # TMDB INFORMATION
-                # ----------------------------------------------
-
-                tmdb_movie = get_tmdb_movie(
-                    tmdb_id
+                # Get TMDB information
+                tmdb_movie = get_movie_information(
+                    tmdb_id,
+                    movie_title
                 )
 
 
@@ -795,75 +707,72 @@ if not matching_movies.empty:
 
                 if tmdb_movie:
 
-                    poster_url = (
-                        get_poster_url(
-                            tmdb_movie.get(
-                                "poster_path"
-                            )
-                        )
-                    )
-
-                    overview = (
+                    poster_url = get_poster_url(
                         tmdb_movie.get(
-                            "overview"
+                            "poster_path"
                         )
                     )
 
+                    overview = tmdb_movie.get(
+                        "overview"
+                    )
 
-                # ----------------------------------------------
-                # CARD
-                # ----------------------------------------------
+
+                # ==============================================
+                # MOVIE CARD
+                # ==============================================
 
                 st.markdown(
-                    '<div class="recommendation-card">',
+                    '<div class="movie-card">',
                     unsafe_allow_html=True
                 )
 
 
-                col1, col2, col3 = st.columns(
-                    [1.2, 5, 1.5]
+                col_poster, col_info, col_score = st.columns(
+                    [1, 4, 1]
                 )
 
 
-                # ----------------------------------------------
+                # ==============================================
                 # POSTER
-                # ----------------------------------------------
+                # ==============================================
 
-                with col1:
+                with col_poster:
 
                     if poster_url:
 
                         st.image(
                             poster_url,
-                            width=120
+                            width=140
                         )
 
                     else:
 
                         st.markdown(
-                            "🎬\n\n"
-                            "**Poster unavailable**"
+                            "🎬\n\nPoster unavailable"
                         )
 
 
-                # ----------------------------------------------
+                # ==============================================
                 # MOVIE INFORMATION
-                # ----------------------------------------------
+                # ==============================================
 
-                with col2:
+                with col_info:
 
                     st.markdown(
                         f"""
-                        <div class="rank">
-                            #{rank}
+                        <div class="movie-title">
+                        {rank}. {movie_title}
                         </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
-                        <div class="recommendation-title">
-                            {movie_title}
-                        </div>
 
-                        <div class="recommendation-genres">
-                            {genres}
+                    st.markdown(
+                        f"""
+                        <div class="genre">
+                        Genres: {genres}
                         </div>
                         """,
                         unsafe_allow_html=True
@@ -872,17 +781,10 @@ if not matching_movies.empty:
 
                     if overview:
 
-                        short_description = (
-                            overview[:220]
-                            + "..."
-                            if len(overview) > 220
-                            else overview
-                        )
-
                         st.markdown(
                             f"""
-                            <div class="recommendation-description">
-                                {short_description}
+                            <div class="description">
+                            {overview}
                             </div>
                             """,
                             unsafe_allow_html=True
@@ -892,107 +794,48 @@ if not matching_movies.empty:
 
                         st.markdown(
                             """
-                            <div class="recommendation-description">
-                                Movie description is unavailable.
+                            <div class="description">
+                            Description unavailable.
                             </div>
                             """,
                             unsafe_allow_html=True
                         )
 
 
-                # ----------------------------------------------
-                # DETAILS BUTTON
-                # ----------------------------------------------
+                # ==============================================
+                # SIMILARITY
+                # ==============================================
 
-                with col3:
+                with col_score:
 
-                    st.write("")
+                    st.markdown(
+                        "Similarity"
+                    )
 
-                    details_key = (
-                        f"details_"
-                        f"{method}_"
-                        f"{movie['movieId']}"
+                    st.markdown(
+                        f"""
+                        <div class="similarity">
+                        {similarity:.4f}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
                     )
 
 
-                    if st.button(
-                        "View Details",
-                        key=details_key,
-                        use_container_width=True
-                    ):
-
-                        @st.dialog(
-                            movie_title
-                        )
-                        def show_movie_details():
-
-                            tmdb_details = (
-                                get_tmdb_movie(
-                                    tmdb_id
-                                )
-                            )
-
-                            if tmdb_details:
-
-                                poster = (
-                                    get_poster_url(
-                                        tmdb_details.get(
-                                            "poster_path"
-                                        )
-                                    )
-                                )
-
-                                if poster:
-
-                                    st.image(
-                                        poster,
-                                        use_container_width=True
-                                    )
-
-                                st.subheader(
-                                    tmdb_details.get(
-                                        "title",
-                                        movie_title
-                                    )
-                                )
-
-                                st.caption(
-                                    tmdb_details.get(
-                                        "release_date",
-                                        ""
-                                    )
-                                )
-
-                                st.write(
-                                    tmdb_details.get(
-                                        "overview",
-                                        "Description unavailable."
-                                    )
-                                )
-
-                            else:
-
-                                st.subheader(
-                                    movie_title
-                                )
-
-                                st.write(
-                                    f"Genres: {genres}"
-                                )
-
-                                st.info(
-                                    "Additional movie details "
-                                    "are currently unavailable."
-                                )
-
-
-                        show_movie_details()
-
-
                 st.markdown(
-                    '</div>',
+                    "</div>",
                     unsafe_allow_html=True
                 )
+
+
+else:
+
+    if search_text:
+
+        st.warning(
+            "No matching movies found. "
+            "Try another movie title."
+        )
 
 
 # ============================================================
@@ -1001,12 +844,7 @@ if not matching_movies.empty:
 
 st.divider()
 
-st.markdown(
-    """
-    <div class="footer">
-        Movie Recommendation System
-        · Collaborative Filtering & Content-Based Filtering
-    </div>
-    """,
-    unsafe_allow_html=True
+st.caption(
+    "Movie Recommendation System — "
+    "Item-Based Collaborative Filtering"
 )
