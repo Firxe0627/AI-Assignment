@@ -302,9 +302,7 @@ except Exception:
     TMDB_TOKEN = None
 
 
-@st.cache_data(
-    show_spinner=False
-)
+@st.cache_data(show_spinner=False)
 def get_tmdb_movie(tmdb_id):
 
     if pd.isna(tmdb_id):
@@ -318,75 +316,73 @@ def get_tmdb_movie(tmdb_id):
         "accept": "application/json"
     }
 
-    try:
+    tmdb_id = int(tmdb_id)
 
-        tmdb_id = int(tmdb_id)
+    # Try Movie
+    movie_url = f"https://api.themoviedb.org/3/movie/{tmdb_id}"
 
-        # =====================================================
-        # Try Movie first
-        # =====================================================
+    movie_response = requests.get(
+        movie_url,
+        headers=headers,
+        timeout=10
+    )
 
-        movie_url = (
-            "https://api.themoviedb.org/3/movie/"
-            f"{tmdb_id}"
+    # Movie works
+    if movie_response.status_code == 200:
+
+        data = movie_response.json()
+        data["_media_type"] = "movie"
+
+        return data
+
+    # Try TV
+    tv_url = f"https://api.themoviedb.org/3/tv/{tmdb_id}"
+
+    tv_response = requests.get(
+        tv_url,
+        headers=headers,
+        timeout=10
+    )
+
+    # TV works
+    if tv_response.status_code == 200:
+
+        data = tv_response.json()
+
+        data["title"] = data.get(
+            "name",
+            data.get("original_name", "")
         )
 
-        response = requests.get(
-            movie_url,
-            headers=headers,
-            timeout=10
+        data["release_date"] = data.get(
+            "first_air_date",
+            ""
         )
 
-        if response.status_code == 200:
+        data["_media_type"] = "tv"
 
-            data = response.json()
+        return data
 
-            data["_media_type"] = "movie"
+    # DEBUG INFORMATION
+    st.error(
+        f"""
+        TMDB request failed.
 
-            return data
+        TMDB ID: {tmdb_id}
 
-        # =====================================================
-        # If Movie not found, try TV Series
-        # =====================================================
+        Movie API status: {movie_response.status_code}
 
-        tv_url = (
-            "https://api.themoviedb.org/3/tv/"
-            f"{tmdb_id}"
-        )
+        Movie response:
+        {movie_response.text[:500]}
 
-        response = requests.get(
-            tv_url,
-            headers=headers,
-            timeout=10
-        )
+        TV API status: {tv_response.status_code}
 
-        if response.status_code == 200:
+        TV response:
+        {tv_response.text[:500]}
+        """
+    )
 
-            data = response.json()
-
-            # Convert TV fields into the fields
-            # already used by your application
-
-            data["title"] = data.get(
-                "name",
-                data.get("original_name", "")
-            )
-
-            data["release_date"] = data.get(
-                "first_air_date",
-                ""
-            )
-
-            data["_media_type"] = "tv"
-
-            return data
-
-        return None
-
-    except Exception:
-
-        return None
-
+    return None
 
 # ============================================================
 # POSTER URL
