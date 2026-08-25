@@ -246,7 +246,6 @@ except Exception as e:
 # LOAD LINKS
 # ============================================================
 
-@st.cache_data
 def load_links():
 
     links = pd.read_csv(
@@ -655,7 +654,7 @@ def get_content_model_version():
     )
 
 
-@st.cache_resource
+
 def load_content_model(model_version):
 
     genre_matrix = load_npz(
