@@ -362,25 +362,6 @@ def get_tmdb_movie(tmdb_id):
 
         return data
 
-    # DEBUG INFORMATION
-    st.error(
-        f"""
-        TMDB request failed.
-
-        TMDB ID: {tmdb_id}
-
-        Movie API status: {movie_response.status_code}
-
-        Movie response:
-        {movie_response.text[:500]}
-
-        TV API status: {tv_response.status_code}
-
-        TV response:
-        {tv_response.text[:500]}
-        """
-    )
-
     return None
 
 # ============================================================
