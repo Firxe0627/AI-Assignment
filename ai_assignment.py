@@ -5,10 +5,11 @@ import pickle
 import requests
 import html
 import os
-from sklearn.feature_extraction.text import TfidfVectorizer
+
 from sklearn.metrics.pairwise import cosine_similarity
 from streamlit_searchbox import st_searchbox
 
+from scipy.sparse import load_npz
 
 # ============================================================
 # PAGE CONFIG
@@ -493,108 +494,201 @@ def recommend_cf(movie_id, n=10):
     )
 
     return recommendations_df.head(n)
-
-
-# ============================================================
-# CONTENT-BASED MODEL
-# ============================================================
-
-@st.cache_resource
-def build_content_model():
-
-    content_data = (
-        movie_metadata
-        .copy()
-        .reset_index(drop=True)
-    )
-
-    content_data["genres"] = (
-        content_data["genres"]
-        .fillna("")
-        .astype(str)
-        .str.replace(
-            "|",
-            " ",
-            regex=False
-        )
-    )
-
-    vectorizer = TfidfVectorizer(
-        lowercase=True
-    )
-
-    genre_matrix = vectorizer.fit_transform(
-        content_data["genres"]
-    )
-
-    return (
-        content_data,
-        vectorizer,
-        genre_matrix
-    )
-
-
-(
-    content_data,
-    content_vectorizer,
-    content_matrix
-) = build_content_model()
-
-
 # ============================================================
 # CONTENT-BASED RECOMMENDATION
 # ============================================================
 
 def recommend_content(movie_id, n=10):
 
-    matches = content_data[
-        content_data["movieId"]
-        == movie_id
+    if movie_id not in content_movie_to_index:
+
+        return pd.DataFrame()
+
+    movie_index = content_movie_to_index[
+        movie_id
     ]
 
-    if matches.empty:
-        return pd.DataFrame()
+    # --------------------------------------------------------
+    # Genre similarity
+    # --------------------------------------------------------
 
-    movie_index = matches.index[0]
-
-    similarity_scores = cosine_similarity(
-        content_matrix[movie_index],
-        content_matrix
+    genre_similarity = cosine_similarity(
+        content_genre_matrix[movie_index],
+        content_genre_matrix
     ).flatten()
 
-    ranked_indices = (
-        similarity_scores
-        .argsort()[::-1]
+    # --------------------------------------------------------
+    # Tag similarity
+    # --------------------------------------------------------
+
+    tag_similarity = cosine_similarity(
+        content_tag_matrix[movie_index],
+        content_tag_matrix
+    ).flatten()
+
+    # --------------------------------------------------------
+    # Weighted similarity
+    # Genre = 10%
+    # Tag   = 90%
+    # --------------------------------------------------------
+
+    final_similarity = (
+        GENRE_WEIGHT * genre_similarity
+        +
+        TAG_WEIGHT * tag_similarity
     )
 
-    recommendations = []
+    # Do not recommend the selected movie itself
+    final_similarity[movie_index] = -1
 
-    for index in ranked_indices:
+    # --------------------------------------------------------
+    # Get Top N movies
+    # --------------------------------------------------------
 
-        if index == movie_index:
-            continue
+    top_indices = np.argsort(
+        final_similarity
+    )[::-1][:n]
 
-        recommendations.append(
-            content_data.iloc[index][
-                [
-                    "movieId",
-                    "title",
-                    "genres",
-                    "tmdbId"
-                ]
+    recommendations = (
+        content_metadata
+        .iloc[top_indices]
+        [
+            [
+                "movieId",
+                "title",
+                "genres"
             ]
+        ]
+        .copy()
+    )
+
+    recommendations["similarity"] = np.round(
+        final_similarity[top_indices],
+        6
+    )
+
+    # --------------------------------------------------------
+    # Add TMDB ID
+    # --------------------------------------------------------
+
+    recommendations = recommendations.merge(
+        links[
+            [
+                "movieId",
+                "tmdbId"
+            ]
+        ],
+        on="movieId",
+        how="left"
+    )
+
+    recommendations.reset_index(
+        drop=True,
+        inplace=True
+    )
+
+    return recommendations
+# ============================================================
+# CONTENT-BASED MODEL
+# ============================================================
+
+CONTENT_MODEL_DIR = "content_models"
+
+GENRE_WEIGHT = 0.1
+TAG_WEIGHT = 0.9
+
+
+def get_content_model_version():
+
+    model_files = [
+        "content_models/genre_matrix.npz",
+        "content_models/tag_matrix.npz",
+        "content_models/movie_to_index.pkl",
+        "content_models/index_to_movie.pkl",
+        "content_models/movie_metadata.csv"
+    ]
+
+    return tuple(
+        os.path.getmtime(file)
+        for file in model_files
+    )
+
+
+@st.cache_resource
+def load_content_model(model_version):
+
+    genre_matrix = load_npz(
+        os.path.join(
+            CONTENT_MODEL_DIR,
+            "genre_matrix.npz"
         )
+    )
 
-        if len(recommendations) >= n:
-            break
+    tag_matrix = load_npz(
+        os.path.join(
+            CONTENT_MODEL_DIR,
+            "tag_matrix.npz"
+        )
+    )
 
-    if not recommendations:
-        return pd.DataFrame()
+    with open(
+        os.path.join(
+            CONTENT_MODEL_DIR,
+            "movie_to_index.pkl"
+        ),
+        "rb"
+    ) as f:
 
-    return pd.DataFrame(
-        recommendations
-    ).head(n)
+        content_movie_to_index = pickle.load(f)
 
+
+    with open(
+        os.path.join(
+            CONTENT_MODEL_DIR,
+            "index_to_movie.pkl"
+        ),
+        "rb"
+    ) as f:
+
+        content_index_to_movie = pickle.load(f)
+
+
+    content_metadata = pd.read_csv(
+        os.path.join(
+            CONTENT_MODEL_DIR,
+            "movie_metadata.csv"
+        )
+    )
+
+
+    return (
+        genre_matrix,
+        tag_matrix,
+        content_movie_to_index,
+        content_index_to_movie,
+        content_metadata
+    )
+
+
+try:
+
+    (
+        content_genre_matrix,
+        content_tag_matrix,
+        content_movie_to_index,
+        content_index_to_movie,
+        content_metadata
+    ) = load_content_model(
+        get_content_model_version()
+    )
+
+except Exception as e:
+
+    st.error(
+        f"Unable to load Content-Based model: {e}"
+    )
+
+    st.stop()
 
 # ============================================================
 # RECOMMENDATION METHOD
@@ -633,8 +727,8 @@ else:
     st.markdown(
         """
         <div class="method-description">
-        Recommends movies with similar content characteristics,
-        using movie genres as the content representation.
+        Recommends movies based on content similarity using
+        movie genres and user-generated tags.
         </div>
         """,
         unsafe_allow_html=True
@@ -808,33 +902,7 @@ if (
             )
 
 
-    # ========================================================
-    # FALLBACK
-    # ========================================================
-
-    if recommendations.empty:
-
-        st.warning(
-            "The selected recommendation method "
-            "could not generate results. "
-            "Trying the alternative method..."
-        )
-
-        if method == "🤝 Collaborative Filtering":
-
-            recommendations = recommend_content(
-                selected_movie_id,
-                n=10
-            )
-
-        else:
-
-            recommendations = recommend_cf(
-                selected_movie_id,
-                n=10
-            )
-
-
+   
     # ========================================================
     # FINAL RESULT
     # ========================================================
