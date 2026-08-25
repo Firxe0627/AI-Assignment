@@ -302,7 +302,9 @@ except Exception:
     TMDB_TOKEN = None
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(
+    show_spinner=False
+)
 def get_tmdb_movie(tmdb_id):
 
     if pd.isna(tmdb_id):
@@ -318,13 +320,15 @@ def get_tmdb_movie(tmdb_id):
 
     try:
 
-        # ====================================================
-        # 1. Try Movie
-        # ====================================================
+        tmdb_id = int(tmdb_id)
+
+        # =====================================================
+        # Try Movie first
+        # =====================================================
 
         movie_url = (
             "https://api.themoviedb.org/3/movie/"
-            f"{int(tmdb_id)}"
+            f"{tmdb_id}"
         )
 
         response = requests.get(
@@ -337,19 +341,17 @@ def get_tmdb_movie(tmdb_id):
 
             data = response.json()
 
-            # Mark this as a movie
             data["_media_type"] = "movie"
 
             return data
 
-
-        # ====================================================
-        # 2. If not a movie, try TV
-        # ====================================================
+        # =====================================================
+        # If Movie not found, try TV Series
+        # =====================================================
 
         tv_url = (
             "https://api.themoviedb.org/3/tv/"
-            f"{int(tmdb_id)}"
+            f"{tmdb_id}"
         )
 
         response = requests.get(
@@ -362,11 +364,22 @@ def get_tmdb_movie(tmdb_id):
 
             data = response.json()
 
-            # Mark this as a TV show
+            # Convert TV fields into the fields
+            # already used by your application
+
+            data["title"] = data.get(
+                "name",
+                data.get("original_name", "")
+            )
+
+            data["release_date"] = data.get(
+                "first_air_date",
+                ""
+            )
+
             data["_media_type"] = "tv"
 
             return data
-
 
         return None
 
