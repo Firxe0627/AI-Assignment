@@ -302,10 +302,6 @@ except Exception:
     TMDB_TOKEN = None
 
 
-# ============================================================
-# TMDB API
-# ============================================================
-
 @st.cache_data(show_spinner=False)
 def get_tmdb_movie(tmdb_id):
 
@@ -315,28 +311,64 @@ def get_tmdb_movie(tmdb_id):
     if TMDB_TOKEN is None:
         return None
 
+    headers = {
+        "Authorization": f"Bearer {TMDB_TOKEN}",
+        "accept": "application/json"
+    }
+
     try:
 
-        url = (
+        # ====================================================
+        # 1. Try Movie
+        # ====================================================
+
+        movie_url = (
             "https://api.themoviedb.org/3/movie/"
             f"{int(tmdb_id)}"
         )
 
-        headers = {
-            "Authorization": f"Bearer {TMDB_TOKEN}",
-            "accept": "application/json"
-        }
-
         response = requests.get(
-            url,
+            movie_url,
             headers=headers,
             timeout=10
         )
 
-        if response.status_code != 200:
-            return None
+        if response.status_code == 200:
 
-        return response.json()
+            data = response.json()
+
+            # Mark this as a movie
+            data["_media_type"] = "movie"
+
+            return data
+
+
+        # ====================================================
+        # 2. If not a movie, try TV
+        # ====================================================
+
+        tv_url = (
+            "https://api.themoviedb.org/3/tv/"
+            f"{int(tmdb_id)}"
+        )
+
+        response = requests.get(
+            tv_url,
+            headers=headers,
+            timeout=10
+        )
+
+        if response.status_code == 200:
+
+            data = response.json()
+
+            # Mark this as a TV show
+            data["_media_type"] = "tv"
+
+            return data
+
+
+        return None
 
     except Exception:
 
@@ -985,13 +1017,19 @@ if (
                     )
                 )
 
-                release_date = (
-                    tmdb_movie.get(
+                if tmdb_movie.get("_media_type") == "tv":
+
+                    release_date = tmdb_movie.get(
+                        "first_air_date",
+                        ""
+                    )
+
+                else:
+
+                    release_date = tmdb_movie.get(
                         "release_date",
                         ""
                     )
-                )
-
 
             # --------------------------------------------
             # CARD
@@ -1189,19 +1227,34 @@ def show_movie_details():
                 use_container_width=True
             )
 
-        st.subheader(
-            tmdb_details.get(
-                "title",
-                fallback_title
+            tmdb_title = tmdb_details.get(
+                "title"
             )
-        )
+            
+            if not tmdb_title:
+            
+                tmdb_title = tmdb_details.get(
+                    "name",
+                    fallback_title
+                )
+            
+            st.subheader(
+                tmdb_title
+            )
 
-        release_date = (
-            tmdb_details.get(
-                "release_date",
-                ""
-            )
-        )
+            if tmdb_details.get("_media_type") == "tv":
+            
+                release_date = tmdb_details.get(
+                    "first_air_date",
+                    ""
+                )
+            
+            else:
+            
+                release_date = tmdb_details.get(
+                    "release_date",
+                    ""
+                )
 
         if release_date:
 
