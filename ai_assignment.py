@@ -1272,10 +1272,6 @@ def show_hero_movie():
     if featured_movies.empty:
         return
 
-    # --------------------------------------------------------
-    # Use the first featured movie as the hero movie
-    # --------------------------------------------------------
-
     hero_movie = featured_movies.iloc[0]
 
     hero_movie_id = int(
@@ -1296,10 +1292,6 @@ def show_hero_movie():
     hero_tmdb_id = hero_movie.get(
         "tmdbId"
     )
-
-    # --------------------------------------------------------
-    # Get TMDB information
-    # --------------------------------------------------------
 
     tmdb_movie = get_tmdb_movie(
         hero_tmdb_id
@@ -1344,23 +1336,15 @@ def show_hero_movie():
                 )
             )
 
-    # --------------------------------------------------------
-    # Fallback background
-    # --------------------------------------------------------
-
     if not backdrop_url:
 
-        backdrop_url = (
-            get_poster_url(
-                tmdb_movie.get("poster_path")
-            )
-            if tmdb_movie
-            else None
-        )
+        if tmdb_movie:
 
-    # --------------------------------------------------------
-    # Hero metadata
-    # --------------------------------------------------------
+            backdrop_url = get_poster_url(
+                tmdb_movie.get(
+                    "poster_path"
+                )
+            )
 
     hero_year = get_year(
         hero_title
@@ -1396,67 +1380,82 @@ def show_hero_movie():
             "similar recommendations."
         )
 
-    # --------------------------------------------------------
-    # Background
-    # --------------------------------------------------------
+    # ========================================================
+    # HERO HTML
+    # ========================================================
+
+    background_html = ""
 
     if backdrop_url:
 
-        background_html = f"""
-        <img
-            class="netflix-hero-background"
-            src="{html.escape(backdrop_url)}"
-        >
-        """
+        background_html = (
+            '<img '
+            'class="netflix-hero-background" '
+            'src="'
+            + html.escape(
+                backdrop_url,
+                quote=True
+            )
+            + '" '
+            'alt="'
+            + html.escape(
+                hero_title,
+                quote=True
+            )
+            + '">'
+        )
 
-    else:
+    hero_html = (
+        '<div class="netflix-hero">'
+        + background_html
+        + '<div class="netflix-hero-overlay"></div>'
+        + '<div class="netflix-hero-content">'
 
-        background_html = ""
+        + '<div class="netflix-hero-label">'
+        + '⭐ Featured Movie'
+        + '</div>'
 
-    # --------------------------------------------------------
-    # Hero content
-    # --------------------------------------------------------
+        + '<div class="netflix-hero-title">'
+        + html.escape(hero_title)
+        + '</div>'
+
+        + '<div class="netflix-hero-meta">'
+        + html.escape(hero_year)
+
+        + (
+            ' &nbsp;•&nbsp; '
+            if hero_year and hero_genres
+            else ''
+        )
+
+        + html.escape(hero_genres)
+        + '</div>'
+
+        + '<div class="netflix-hero-overview">'
+        + html.escape(hero_overview)
+        + '</div>'
+
+        + '</div>'
+
+        + '<div class="netflix-hero-fade-bottom"></div>'
+
+        + '</div>'
+    )
+
+    # ========================================================
+    # IMPORTANT
+    # Do NOT indent the HTML string.
+    # This prevents Streamlit from interpreting it as code.
+    # ========================================================
 
     st.markdown(
-        f"""
-        <div class="netflix-hero">
-
-            {background_html}
-
-            <div class="netflix-hero-overlay"></div>
-
-            <div class="netflix-hero-content">
-
-                <div class="netflix-hero-label">
-                    ⭐ Featured Movie
-                </div>
-
-                <div class="netflix-hero-title">
-                    {html.escape(hero_title)}
-                </div>
-
-                <div class="netflix-hero-meta">
-                    {html.escape(hero_year)}
-                    {"  •  " if hero_year and hero_genres else ""}
-                    {html.escape(hero_genres)}
-                </div>
-
-                <div class="netflix-hero-overview">
-                    {html.escape(hero_overview)}
-                </div>
-
-            </div>
-
-            <div class="netflix-hero-fade-bottom"></div>
-
-        </div>
-        """,
+        hero_html,
         unsafe_allow_html=True
     )
 
-    # --------------------------------------------------------
-    # Hero buttons
-    # --------------------------------------------------------
+    # ========================================================
+    # HERO BUTTONS
+    # ========================================================
 
     hero_col1, hero_col2, hero_col3 = st.columns(
         [1.2, 1.2, 7]
@@ -1468,9 +1467,6 @@ def show_hero_movie():
             "✨ Recommend Similar",
             key="hero_recommend_button"
         ):
-
-            # Use the currently selected recommendation
-            # method stored in session state.
 
             hero_method = st.session_state.get(
                 "selected_recommendation_method",
@@ -1556,6 +1552,8 @@ def show_hero_movie():
         '</div>',
         unsafe_allow_html=True
     )
+
+
 # ============================================================
 # HOMEPAGE MOVIE DATA
 # ============================================================
