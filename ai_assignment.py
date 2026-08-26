@@ -331,7 +331,8 @@ if "details_genres" not in st.session_state:
 if "details_return_page" not in st.session_state:
     st.session_state.details_return_page = "home"
 
-
+if "hero_movie_id" not in st.session_state:
+    st.session_state.hero_movie_id = None
 # ============================================================
 # HEADER
 # ============================================================
@@ -1283,7 +1284,6 @@ def show_hero_movie():
 
     # ========================================================
     # RANDOM HERO MOVIE
-    # Select a random movie from the entire movie dataset.
     # ========================================================
 
     hero_candidates = movie_metadata[
@@ -1294,12 +1294,49 @@ def show_hero_movie():
         return
 
     # --------------------------------------------------------
-    # Select random Hero movie
+    # Select Hero movie only once.
+    #
+    # Streamlit reruns the script whenever a button is clicked.
+    # Therefore the selected Hero movie must be stored in
+    # session_state instead of using sample() every rerun.
     # --------------------------------------------------------
 
-    hero_movie = hero_candidates.sample(
-        n=1
-    ).iloc[0]
+    if st.session_state.hero_movie_id is None:
+
+        hero_movie = hero_candidates.sample(
+            n=1
+        ).iloc[0]
+
+        st.session_state.hero_movie_id = int(
+            hero_movie["movieId"]
+        )
+
+    # --------------------------------------------------------
+    # Retrieve the saved Hero movie
+    # --------------------------------------------------------
+
+    hero_matches = hero_candidates[
+        hero_candidates["movieId"]
+        == st.session_state.hero_movie_id
+    ]
+
+    # --------------------------------------------------------
+    # Safety fallback
+    # --------------------------------------------------------
+
+    if hero_matches.empty:
+
+        hero_movie = hero_candidates.sample(
+            n=1
+        ).iloc[0]
+
+        st.session_state.hero_movie_id = int(
+            hero_movie["movieId"]
+        )
+
+    else:
+
+        hero_movie = hero_matches.iloc[0]
 
     hero_movie_id = int(
         hero_movie["movieId"]
@@ -1308,10 +1345,6 @@ def show_hero_movie():
     # ========================================================
     # HERO MOVIE INFORMATION
     # ========================================================
-
-    hero_movie_id = int(
-        hero_movie["movieId"]
-    )
 
     hero_title = format_movie_title(
         str(hero_movie["title"])
@@ -1988,6 +2021,7 @@ if (
         st.session_state.details_title = ""
         st.session_state.details_genres = ""
         st.session_state.details_return_page = "home"
+        st.session_state.hero_movie_id = None
 
         # RESET SEARCHBOX
         # ========================================================
