@@ -1281,63 +1281,30 @@ def show_hero_movie():
     if movie_metadata.empty:
         return
 
-    # ========================================================
-    # RANDOM HERO MOVIE
-    # Select from the ENTIRE movie dataset.
-    # The selected movie stays stable during the current
-    # Streamlit session.
-    # ========================================================
+# ========================================================
+# RANDOM HERO MOVIE
+# Select a random movie from the entire movie dataset.
+# ========================================================
 
-    hero_candidates = movie_metadata[
-        movie_metadata["title"].notna()
-    ].copy()
+hero_candidates = movie_metadata[
+    movie_metadata["title"].notna()
+].copy()
 
-    if hero_candidates.empty:
-        return
+if hero_candidates.empty:
+    return
 
-    # --------------------------------------------------------
-    # Select a random movie only when there is no current Hero
-    # --------------------------------------------------------
+# --------------------------------------------------------
+# Select random Hero movie
+# --------------------------------------------------------
 
-    if (
-        "hero_movie_id" not in st.session_state
-        or st.session_state.hero_movie_id is None
-    ):
+hero_movie = hero_candidates.sample(
+    n=1,
+    random_state=None
+).iloc[0]
 
-        hero_movie = hero_candidates.sample(
-            n=1
-        ).iloc[0]
-
-        st.session_state.hero_movie_id = int(
-            hero_movie["movieId"]
-        )
-
-    # --------------------------------------------------------
-    # Get the saved Hero movie
-    # --------------------------------------------------------
-
-    hero_matches = hero_candidates[
-        hero_candidates["movieId"]
-        == st.session_state.hero_movie_id
-    ]
-
-    # --------------------------------------------------------
-    # Safety fallback
-    # --------------------------------------------------------
-
-    if hero_matches.empty:
-
-        hero_movie = hero_candidates.sample(
-            n=1
-        ).iloc[0]
-
-        st.session_state.hero_movie_id = int(
-            hero_movie["movieId"]
-        )
-
-    else:
-
-        hero_movie = hero_matches.iloc[0]
+hero_movie_id = int(
+    hero_movie["movieId"]
+)
 
     # ========================================================
     # HERO MOVIE INFORMATION
@@ -1654,186 +1621,7 @@ def show_hero_movie():
         unsafe_allow_html=True
     )
 
-    # ========================================================
-    # HERO HTML
-    # ========================================================
 
-    background_html = ""
-
-    if backdrop_url:
-
-        background_html = (
-            '<img '
-            'class="netflix-hero-background" '
-            'src="'
-            + html.escape(
-                backdrop_url,
-                quote=True
-            )
-            + '" '
-            'alt="'
-            + html.escape(
-                hero_title,
-                quote=True
-            )
-            + '">'
-        )
-
-    hero_html = (
-        '<div class="netflix-hero">'
-        + background_html
-        + '<div class="netflix-hero-overlay"></div>'
-        + '<div class="netflix-hero-content">'
-
-        + '<div class="netflix-hero-label">'
-        + '⭐ Featured Movie'
-        + '</div>'
-
-        + '<div class="netflix-hero-title">'
-        + html.escape(hero_title)
-        + '</div>'
-
-        + '<div class="netflix-hero-meta">'
-        + html.escape(hero_year)
-
-        + (
-            ' &nbsp;•&nbsp; '
-            if hero_year and hero_genres
-            else ''
-        )
-
-        + html.escape(hero_genres)
-        + '</div>'
-
-        + '<div class="netflix-hero-overview">'
-        + html.escape(hero_overview)
-        + '</div>'
-
-        + '</div>'
-
-        + '<div class="netflix-hero-fade-bottom"></div>'
-
-        + '</div>'
-    )
-
-    # ========================================================
-    # IMPORTANT
-    # Do NOT indent the HTML string.
-    # This prevents Streamlit from interpreting it as code.
-    # ========================================================
-
-    st.markdown(
-        hero_html,
-        unsafe_allow_html=True
-    )
-
-    # ========================================================
-    # HERO BUTTONS
-    # ========================================================
-    st.markdown(
-        '<div class="hero-button-row">',
-        unsafe_allow_html=True
-    )
-    
-    hero_col1, hero_col2, hero_col3 = st.columns(
-        [1.2, 1.2, 7]
-    )
-    with hero_col1:
-
-        if st.button(
-            "✨ Recommend Similar",
-            key="hero_recommend_button"
-        ):
-
-            hero_method = st.session_state.get(
-                "selected_recommendation_method",
-                "🤝 Collaborative Filtering"
-            )
-
-            st.session_state.selected_movie_id = (
-                hero_movie_id
-            )
-
-            st.session_state.selected_recommendation_method = (
-                hero_method
-            )
-
-            st.session_state.results_method = (
-                hero_method
-            )
-
-            with st.spinner(
-                "Generating recommendations..."
-            ):
-
-                if hero_method == (
-                    "🤝 Collaborative Filtering"
-                ):
-
-                    hero_recommendations = (
-                        recommend_cf(
-                            hero_movie_id,
-                            n=10
-                        )
-                    )
-
-                else:
-
-                    hero_recommendations = (
-                        recommend_content(
-                            hero_movie_id,
-                            n=10
-                        )
-                    )
-
-            st.session_state.recommendation_results = (
-                hero_recommendations
-            )
-
-            st.session_state.recommend_clicked = True
-
-            st.session_state.page = "results"
-
-            st.rerun()
-
-    with hero_col2:
-
-        if st.button(
-            "ⓘ More Info",
-            key="hero_details_button"
-        ):
-
-            st.session_state.details_movie_id = (
-                hero_movie_id
-            )
-
-            st.session_state.details_tmdb_id = (
-                hero_tmdb_id
-            )
-
-            st.session_state.details_title = (
-                hero_title
-            )
-
-            st.session_state.details_genres = (
-                hero_genres
-            )
-
-            st.session_state.details_return_page = (
-                "home"
-            )
-
-    st.markdown(
-        '</div>',
-        unsafe_allow_html=True
-    )
-
-    st.markdown(
-        '<div class="hero-info-label">'
-        'Featured movie selected from the movie dataset'
-        '</div>',
-        unsafe_allow_html=True
-    )
 
 
 # ============================================================
@@ -2168,8 +1956,6 @@ if (
     
         st.session_state.selected_movie_id = None
 
-        st.session_state.hero_movie_id = None
-    
         # ========================================================
         # CLEAR RECOMMENDATION RESULTS
         # ========================================================
