@@ -1185,24 +1185,20 @@ if st.session_state.page == "home":
     if method == "🤝 Collaborative Filtering":
 
         st.markdown(
-            """
-            <div class="method-description">
-                Recommends movies based on relationships between
-                movies derived from user rating behaviour.
-            </div>
-            """,
+            '<div class="method-description">'
+            'Recommends movies based on relationships between '
+            'movies derived from user rating behaviour.'
+            '</div>',
             unsafe_allow_html=True
         )
 
     else:
 
         st.markdown(
-            """
-            <div class="method-description">
-                Recommends movies based on content similarity using
-                movie genres and user-generated tags.
-            </div>
-            """,
+            '<div class="method-description">'
+            'Recommends movies based on content similarity using '
+            'movie genres and user-generated tags.'
+            '</div>',
             unsafe_allow_html=True
         )
 
@@ -1295,19 +1291,14 @@ if st.session_state.page == "home":
             )
 
             st.markdown(
-                f"""
-                <div class="selected-movie-card">
-
-                    <div class="selected-title">
-                        🎬 {html.escape(selected_title)}
-                    </div>
-
-                    <div class="selected-genres">
-                        {html.escape(selected_genres)}
-                    </div>
-
-                </div>
-                """,
+                f'<div class="selected-movie-card">'
+                f'<div class="selected-title">'
+                f'🎬 {html.escape(selected_title)}'
+                f'</div>'
+                f'<div class="selected-genres">'
+                f'{html.escape(selected_genres)}'
+                f'</div>'
+                f'</div>',
                 unsafe_allow_html=True
             )
 
@@ -1524,19 +1515,14 @@ if (
         )
 
         st.markdown(
-            f"""
-            <div class="selected-movie-card">
-
-                <div class="selected-title">
-                    🎬 {html.escape(selected_display_title)}
-                </div>
-
-                <div class="selected-genres">
-                    {html.escape(selected_display_genres)}
-                </div>
-
-            </div>
-            """,
+            f'<div class="selected-movie-card">'
+            f'<div class="selected-title">'
+            f'🎬 {html.escape(selected_display_title)}'
+            f'</div>'
+            f'<div class="selected-genres">'
+            f'{html.escape(selected_display_genres)}'
+            f'</div>'
+            f'</div>',
             unsafe_allow_html=True
         )
 
