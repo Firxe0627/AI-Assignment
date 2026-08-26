@@ -1281,9 +1281,26 @@ def show_hero_movie():
     if featured_movies.empty:
         return
 
-    hero_movie = featured_movies.sample(
-        n=1
-    ).iloc[0]
+    if "hero_movie_id" not in st.session_state:
+        st.session_state.hero_movie_id = int(
+            featured_movies.sample(n=1).iloc[0]["movieId"]
+        )
+    
+    hero_matches = featured_movies[
+        featured_movies["movieId"]
+        == st.session_state.hero_movie_id
+    ]
+    
+    if hero_matches.empty:
+        st.session_state.hero_movie_id = int(
+            featured_movies.sample(n=1).iloc[0]["movieId"]
+        )
+        hero_matches = featured_movies[
+            featured_movies["movieId"]
+            == st.session_state.hero_movie_id
+        ]
+    
+    hero_movie = hero_matches.iloc[0]
 
     hero_movie_id = int(
         hero_movie["movieId"]
