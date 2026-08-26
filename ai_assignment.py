@@ -5,6 +5,7 @@ import pickle
 import requests
 import html
 import os
+import re
 
 from sklearn.metrics.pairwise import cosine_similarity
 from streamlit_searchbox import st_searchbox
@@ -59,10 +60,6 @@ st.markdown(
         margin-bottom: 12px;
     }
 
-    /* ========================================================
-       Netflix-style Movie Rows
-       ======================================================== */
-
     .movie-section-title {
         font-size: 23px;
         font-weight: 700;
@@ -75,17 +72,15 @@ st.markdown(
         font-weight: 600;
         margin-top: 7px;
         line-height: 1.3;
+        min-height: 36px;
     }
 
     .movie-card-year {
         font-size: 12px;
         color: #8f96a3;
         margin-top: 3px;
+        min-height: 16px;
     }
-
-    /* ========================================================
-       Method Description
-       ======================================================== */
 
     .method-description {
         color: #9da3ae;
@@ -93,10 +88,6 @@ st.markdown(
         margin-top: -5px;
         margin-bottom: 15px;
     }
-
-    /* ========================================================
-       Recommendation Cards
-       ======================================================== */
 
     .recommendation-card {
         background: #151820;
@@ -130,9 +121,25 @@ st.markdown(
         color: #ff4b4b;
     }
 
-    /* ========================================================
-       Footer
-       ======================================================== */
+    .selected-movie-card {
+        background: #151820;
+        border: 1px solid #252b36;
+        border-radius: 14px;
+        padding: 18px;
+        margin-top: 15px;
+        margin-bottom: 20px;
+    }
+
+    .selected-title {
+        font-size: 22px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .selected-genres {
+        color: #9da3ae;
+        font-size: 14px;
+    }
 
     .footer {
         text-align: center;
@@ -146,30 +153,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-
-# ============================================================
-# HEADER
-# ============================================================
-
-st.markdown(
-    """
-    <div class="hero">
-        <div class="hero-title">
-            🎬 Movie Recommendation System
-        </div>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-
-st.markdown(
-    """
-    <div class="hero-subtitle">
-        Discover movies using intelligent recommendation techniques
-    </div>
-    """,
-    unsafe_allow_html=True
-)
 
 # ============================================================
 # SESSION STATE
@@ -209,6 +192,28 @@ if "details_title" not in st.session_state:
 if "details_genres" not in st.session_state:
     st.session_state.details_genres = ""
 
+if "details_return_page" not in st.session_state:
+    st.session_state.details_return_page = "home"
+
+
+# ============================================================
+# HEADER
+# ============================================================
+
+st.markdown(
+    """
+    <div class="hero">
+        <div class="hero-title">
+            🎬 Movie Recommendation System
+        </div>
+        <div class="hero-subtitle">
+            Discover movies using intelligent recommendation techniques
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
 
 # ============================================================
 # LOAD COLLABORATIVE FILTERING MODEL
@@ -245,14 +250,12 @@ def load_cf_model(model_version):
         "models/movie_to_index.pkl",
         "rb"
     ) as f:
-
         movie_to_index = pickle.load(f)
 
     with open(
         "models/index_to_movie.pkl",
         "rb"
     ) as f:
-
         index_to_movie = pickle.load(f)
 
     movie_metadata = pd.read_csv(
@@ -492,7 +495,7 @@ def search_movies(search_text):
         return []
 
     search_text = (
-        search_text
+        str(search_text)
         .strip()
         .lower()
     )
@@ -528,7 +531,9 @@ def search_movies(search_text):
             )
         )
 
-        display_text = title
+        display_text = format_movie_title(
+            title
+        )
 
         if (
             genres
@@ -536,13 +541,13 @@ def search_movies(search_text):
         ):
 
             display_text = (
-                f"{title}  ·  {genres}"
+                f"{display_text}  ·  {genres}"
             )
 
         results.append(
             (
                 display_text,
-                movie["movieId"]
+                int(movie["movieId"])
             )
         )
 
@@ -558,8 +563,10 @@ def recommend_cf(
     n=10
 ):
 
-    if movie_id not in movie_to_index:
+    if movie_id is None:
+        return pd.DataFrame()
 
+    if movie_id not in movie_to_index:
         return pd.DataFrame()
 
     movie_index = movie_to_index[
@@ -585,7 +592,6 @@ def recommend_cf(
             similar_index
         )
 
-        # Do not recommend selected movie
         if similar_index == movie_index:
             continue
 
@@ -615,7 +621,6 @@ def recommend_cf(
     )
 
     if recommendations_df.empty:
-
         return recommendations_df
 
     recommendations_df = recommendations_df.merge(
@@ -745,8 +750,10 @@ def recommend_content(
     n=10
 ):
 
-    if movie_id not in content_movie_to_index:
+    if movie_id is None:
+        return pd.DataFrame()
 
+    if movie_id not in content_movie_to_index:
         return pd.DataFrame()
 
     movie_index = (
@@ -779,7 +786,6 @@ def recommend_content(
 
     # --------------------------------------------------------
     # Weighted Similarity
-    #
     # Genre = 10%
     # Tag   = 90%
     # --------------------------------------------------------
@@ -792,7 +798,6 @@ def recommend_content(
         * tag_similarity
     )
 
-    # Do not recommend selected movie
     final_similarity[
         movie_index
     ] = -1
@@ -852,32 +857,30 @@ def recommend_content(
 
 
 # ============================================================
-# HOMEPAGE MOVIE FUNCTIONS
+# MOVIE TITLE FUNCTIONS
 # ============================================================
 
 def get_year(title):
 
-    title = str(title)
+    title = str(title).strip()
 
-    if (
-        "(" in title
-        and ")" in title
-    ):
+    match = re.search(
+        r"\((\d{4})\)\s*$",
+        title
+    )
 
-        year = title[-5:-1]
-
-        if year.isdigit():
-
-            return year
+    if match:
+        return match.group(1)
 
     return ""
+
 
 def format_movie_title(title):
 
     title = str(title).strip()
 
     # --------------------------------------------------------
-    # Move MovieLens article suffix to the front
+    # Convert MovieLens article suffix:
     #
     # "Godfather, The (1972)"
     # -> "The Godfather (1972)"
@@ -886,28 +889,47 @@ def format_movie_title(title):
     # -> "The Lord of the Rings: The Fellowship of the Ring (2001)"
     # --------------------------------------------------------
 
-    for article in ["The", "A", "An"]:
+    pattern = (
+        r"^(.*),\s+"
+        r"(The|A|An)"
+        r"\s*"
+        r"(\(\d{4}\))$"
+    )
 
-        suffix = f", {article} "
+    match = re.match(
+        pattern,
+        title
+    )
 
-        if (
-            title.endswith(")")
-            and suffix in title
-        ):
+    if match:
 
-            main_title, year_part = title.rsplit(
-                suffix,
-                1
-            )
+        main_title = (
+            match.group(1)
+            .strip()
+        )
 
-            return (
-                f"{article} "
-                f"{main_title} "
-                f"{year_part}"
-            )
+        article = (
+            match.group(2)
+            .strip()
+        )
+
+        year = (
+            match.group(3)
+            .strip()
+        )
+
+        return (
+            f"{article} "
+            f"{main_title} "
+            f"{year}"
+        )
 
     return title
 
+
+# ============================================================
+# GENRE MOVIES
+# ============================================================
 
 def get_genre_movies(
     genre,
@@ -930,7 +952,7 @@ def get_genre_movies(
             regex=False,
             na=False
         )
-    ]
+    ].copy()
 
     return matches.head(n)
 
@@ -945,13 +967,12 @@ def show_movie_row(
 ):
 
     if movies.empty:
-
         return
 
     st.markdown(
         f"""
         <div class="movie-section-title">
-            {section_title}
+            {html.escape(section_title)}
         </div>
         """,
         unsafe_allow_html=True
@@ -966,9 +987,9 @@ def show_movie_row(
         movies.iterrows()
     ):
 
-        movie_id = movie[
-            "movieId"
-        ]
+        movie_id = int(
+            movie["movieId"]
+        )
 
         title = format_movie_title(
             str(movie["title"])
@@ -1043,16 +1064,14 @@ def show_movie_row(
                 title
             )
 
-            if year:
-
-                st.markdown(
-                    f"""
-                    <div class="movie-card-year">
-                        {year}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+            st.markdown(
+                f"""
+                <div class="movie-card-year">
+                    {html.escape(year)}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
             # ------------------------------------------------
             # Details Button
@@ -1082,6 +1101,10 @@ def show_movie_row(
 
                 st.session_state.details_genres = (
                     genres
+                )
+
+                st.session_state.details_return_page = (
+                    "home"
                 )
 
                 st.rerun()
@@ -1119,9 +1142,6 @@ sci_fi_movies = get_genre_movies(
     8
 )
 
-# ============================================================
-# HOME PAGE
-# ============================================================
 
 # ============================================================
 # HOME PAGE
@@ -1152,13 +1172,18 @@ if st.session_state.page == "home":
         key="recommendation_method"
     )
 
+    # Keep current method synchronized
+    st.session_state.selected_recommendation_method = (
+        method
+    )
+
     if method == "🤝 Collaborative Filtering":
 
         st.markdown(
             """
             <div class="method-description">
-            Recommends movies based on relationships between
-            movies derived from user rating behaviour.
+                Recommends movies based on relationships between
+                movies derived from user rating behaviour.
             </div>
             """,
             unsafe_allow_html=True
@@ -1169,8 +1194,8 @@ if st.session_state.page == "home":
         st.markdown(
             """
             <div class="method-description">
-            Recommends movies based on content similarity using
-            movie genres and user-generated tags.
+                Recommends movies based on content similarity using
+                movie genres and user-generated tags.
             </div>
             """,
             unsafe_allow_html=True
@@ -1228,62 +1253,136 @@ if st.session_state.page == "home":
                     False
                 )
 
+                st.session_state.recommendation_results = (
+                    None
+                )
+
         except Exception:
 
             pass
 
     # ========================================================
+    # SHOW SELECTED MOVIE
+    # ========================================================
+
+    if st.session_state.selected_movie_id is not None:
+
+        selected_matches = movie_metadata[
+            movie_metadata["movieId"]
+            == st.session_state.selected_movie_id
+        ]
+
+        if not selected_matches.empty:
+
+            selected_movie = (
+                selected_matches.iloc[0]
+            )
+
+            selected_title = format_movie_title(
+                str(selected_movie["title"])
+            )
+
+            selected_genres = str(
+                selected_movie.get(
+                    "genres",
+                    ""
+                )
+            )
+
+            st.markdown(
+                f"""
+                <div class="selected-movie-card">
+
+                    <div class="selected-title">
+                        🎬 {html.escape(selected_title)}
+                    </div>
+
+                    <div class="selected-genres">
+                        {html.escape(selected_genres)}
+                    </div>
+
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+    # ========================================================
     # RECOMMEND BUTTON
     # ========================================================
 
-if st.button(
-    "✨ Recommend Top 10 Movies",
-    type="primary",
-    use_container_width=True,
-    key="recommend_button"
-):
-
-    # Lock the selected recommendation method
-    st.session_state.selected_recommendation_method = (
-        method
-    )
-
-    st.session_state.results_method = (
-        method
-    )
-
-    # Generate recommendations once
-    with st.spinner(
-        "Generating recommendations..."
+    if st.button(
+        "✨ Recommend Top 10 Movies",
+        type="primary",
+        use_container_width=True,
+        key="recommend_button"
     ):
 
-        if method == "🤝 Collaborative Filtering":
+        # ----------------------------------------------------
+        # Validate selection
+        # ----------------------------------------------------
 
-            recommendations = recommend_cf(
-                st.session_state.selected_movie_id,
-                n=10
+        if st.session_state.selected_movie_id is None:
+
+            st.warning(
+                "Please search and select a movie first."
             )
 
         else:
 
-            recommendations = recommend_content(
-                st.session_state.selected_movie_id,
-                n=10
+            # ------------------------------------------------
+            # LOCK METHOD
+            # ------------------------------------------------
+
+            st.session_state.selected_recommendation_method = (
+                method
             )
 
-    # Save recommendations
-    st.session_state.recommendation_results = (
-        recommendations
-    )
+            st.session_state.results_method = (
+                method
+            )
 
-    st.session_state.recommend_clicked = True
+            # ------------------------------------------------
+            # GENERATE RECOMMENDATIONS
+            # ------------------------------------------------
 
-    st.session_state.page = "results"
+            with st.spinner(
+                "Generating recommendations..."
+            ):
 
-    st.rerun()
+                if method == "🤝 Collaborative Filtering":
+
+                    recommendations = recommend_cf(
+                        st.session_state.selected_movie_id,
+                        n=10
+                    )
+
+                else:
+
+                    recommendations = recommend_content(
+                        st.session_state.selected_movie_id,
+                        n=10
+                    )
+
+            # ------------------------------------------------
+            # SAVE RESULTS
+            # ------------------------------------------------
+
+            st.session_state.recommendation_results = (
+                recommendations
+            )
+
+            st.session_state.recommend_clicked = True
+
+            # ------------------------------------------------
+            # GO TO RESULTS PAGE
+            # ------------------------------------------------
+
+            st.session_state.page = "results"
+
+            st.rerun()
 
     # ========================================================
-    # HOMEPAGE MOVIE ROWS
+    # NETFLIX-STYLE MOVIE ROWS
     # ========================================================
 
     st.divider()
@@ -1313,6 +1412,7 @@ if st.button(
         sci_fi_movies
     )
 
+
 # ============================================================
 # RESULTS PAGE
 # ============================================================
@@ -1324,13 +1424,16 @@ if (
 ):
 
     # ========================================================
-    # BACK TO HOME
+    # TOP NAVIGATION
     # ========================================================
 
     if st.button(
         "🏠 Back to Home",
-        key="back_to_home"
+        key="back_to_home",
+        use_container_width=False
     ):
+
+        # Clear recommendation state
 
         st.session_state.selected_movie_id = None
 
@@ -1338,11 +1441,11 @@ if (
 
         st.session_state.recommendation_results = None
 
-        st.session_state.selected_recommendation_method = (
+        st.session_state.results_method = (
             "🤝 Collaborative Filtering"
         )
 
-        st.session_state.results_method = (
+        st.session_state.selected_recommendation_method = (
             "🤝 Collaborative Filtering"
         )
 
@@ -1375,22 +1478,43 @@ if (
             str(selected_movie["title"])
         )
 
-        st.markdown(
-            f"### 🎬 {html.escape(selected_display_title)}"
+        selected_display_genres = str(
+            selected_movie.get(
+                "genres",
+                ""
+            )
         )
 
-        st.caption(
-            str(selected_movie["genres"])
+        st.markdown(
+            f"""
+            <div class="selected-movie-card">
+
+                <div class="selected-title">
+                    🎬 {html.escape(selected_display_title)}
+                </div>
+
+                <div class="selected-genres">
+                    {html.escape(selected_display_genres)}
+                </div>
+
+            </div>
+            """,
+            unsafe_allow_html=True
         )
 
     # ========================================================
-    # LOAD SAVED RECOMMENDATIONS
+    # LOAD SAVED METHOD
     # ========================================================
 
     method = st.session_state.get(
         "results_method",
         "🤝 Collaborative Filtering"
     )
+
+    # IMPORTANT:
+    # Do NOT regenerate recommendations here.
+    # The recommendation method is locked when the user
+    # clicked the Recommend button.
 
     recommendations = (
         st.session_state.get(
@@ -1405,6 +1529,22 @@ if (
         )
 
         st.stop()
+
+    # ========================================================
+    # SHOW METHOD USED
+    # ========================================================
+
+    if method == "🤝 Collaborative Filtering":
+
+        st.caption(
+            "Recommendation method: Collaborative Filtering"
+        )
+
+    else:
+
+        st.caption(
+            "Recommendation method: Content-Based Filtering"
+        )
 
     # ========================================================
     # FINAL RESULT
@@ -1446,16 +1586,19 @@ if (
             start=1
         ):
 
-            movie_id = movie[
-                "movieId"
-            ]
+            movie_id = int(
+                movie["movieId"]
+            )
 
             movie_title = format_movie_title(
                 str(movie["title"])
             )
 
             genres = str(
-                movie["genres"]
+                movie.get(
+                    "genres",
+                    ""
+                )
             )
 
             tmdb_id = movie.get(
@@ -1463,7 +1606,7 @@ if (
             )
 
             # ------------------------------------------------
-            # TMDB
+            # TMDB DETAILS
             # ------------------------------------------------
 
             tmdb_movie = get_tmdb_movie(
@@ -1593,10 +1736,13 @@ if (
 
                 st.write("")
 
+                # IMPORTANT:
+                # Method is intentionally NOT used in the key.
+                # This prevents state/key conflicts between
+                # Collaborative and Content-Based results.
+
                 details_key = (
-                    f"details_"
-                    f"{method}_"
-                    f"{movie_id}"
+                    f"recommendation_details_{movie_id}"
                 )
 
                 if st.button(
@@ -1619,6 +1765,13 @@ if (
 
                     st.session_state.details_genres = (
                         genres
+                    )
+
+                    # Remember that the dialog came from
+                    # the Results Page.
+
+                    st.session_state.details_return_page = (
+                        "results"
                     )
 
                     st.rerun()
@@ -1812,6 +1965,14 @@ if (
 
     show_movie_details()
 
+    # Clear only the temporary dialog trigger.
+    #
+    # This does NOT change:
+    # - page
+    # - results_method
+    # - recommendation_results
+    # - selected_movie_id
+
     st.session_state.details_movie_id = None
 
 
@@ -1819,4 +1980,12 @@ if (
 # FOOTER
 # ============================================================
 
-
+st.markdown(
+    """
+    <div class="footer">
+        Movie Recommendation System ·
+        Collaborative Filtering & Content-Based Filtering
+    </div>
+    """,
+    unsafe_allow_html=True
+)
