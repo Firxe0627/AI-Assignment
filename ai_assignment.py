@@ -1711,8 +1711,6 @@ if st.session_state.page == "home":
     # RECOMMENDATION METHOD
     # ========================================================
 
-    st.divider()
-
     st.markdown(
         '<div class="section-title">'
         '🧠 Recommendation Method'
