@@ -1281,30 +1281,29 @@ def show_hero_movie():
     if movie_metadata.empty:
         return
 
-# ========================================================
-# RANDOM HERO MOVIE
-# Select a random movie from the entire movie dataset.
-# ========================================================
+    # ========================================================
+    # RANDOM HERO MOVIE
+    # Select a random movie from the entire movie dataset.
+    # ========================================================
 
-hero_candidates = movie_metadata[
-    movie_metadata["title"].notna()
-].copy()
+    hero_candidates = movie_metadata[
+        movie_metadata["title"].notna()
+    ].copy()
 
-if hero_candidates.empty:
-    return
+    if hero_candidates.empty:
+        return
 
-# --------------------------------------------------------
-# Select random Hero movie
-# --------------------------------------------------------
+    # --------------------------------------------------------
+    # Select random Hero movie
+    # --------------------------------------------------------
 
-hero_movie = hero_candidates.sample(
-    n=1,
-    random_state=None
-).iloc[0]
+    hero_movie = hero_candidates.sample(
+        n=1
+    ).iloc[0]
 
-hero_movie_id = int(
-    hero_movie["movieId"]
-)
+    hero_movie_id = int(
+        hero_movie["movieId"]
+    )
 
     # ========================================================
     # HERO MOVIE INFORMATION
