@@ -95,34 +95,6 @@ st.markdown(
     }
 
     /* ========================================================
-       Selected Movie
-       ======================================================== */
-
-    .selected-card {
-        background: linear-gradient(
-            135deg,
-            #151922,
-            #1c2330
-        );
-        border: 1px solid #2c3442;
-        border-radius: 14px;
-        padding: 20px;
-        margin-top: 15px;
-        margin-bottom: 20px;
-    }
-
-    .selected-title {
-        font-size: 24px;
-        font-weight: 700;
-        margin-bottom: 6px;
-    }
-
-    .selected-genres {
-        color: #9da3ae;
-        font-size: 14px;
-    }
-
-    /* ========================================================
        Recommendation Cards
        ======================================================== */
 
@@ -208,6 +180,19 @@ if "selected_movie_id" not in st.session_state:
 
 if "recommend_clicked" not in st.session_state:
     st.session_state.recommend_clicked = False
+
+if "selected_recommendation_method" not in st.session_state:
+    st.session_state.selected_recommendation_method = (
+        "🤝 Collaborative Filtering"
+    )
+
+if "recommendation_results" not in st.session_state:
+    st.session_state.recommendation_results = None
+
+if "results_method" not in st.session_state:
+    st.session_state.results_method = (
+        "🤝 Collaborative Filtering"
+    )
 
 if "page" not in st.session_state:
     st.session_state.page = "home"
@@ -887,6 +872,42 @@ def get_year(title):
 
     return ""
 
+def format_movie_title(title):
+
+    title = str(title).strip()
+
+    # --------------------------------------------------------
+    # Move MovieLens article suffix to the front
+    #
+    # "Godfather, The (1972)"
+    # -> "The Godfather (1972)"
+    #
+    # "Lord of the Rings: The Fellowship of the Ring, The (2001)"
+    # -> "The Lord of the Rings: The Fellowship of the Ring (2001)"
+    # --------------------------------------------------------
+
+    for article in ["The", "A", "An"]:
+
+        suffix = f", {article} "
+
+        if (
+            title.endswith(")")
+            and suffix in title
+        ):
+
+            main_title, year_part = title.rsplit(
+                suffix,
+                1
+            )
+
+            return (
+                f"{article} "
+                f"{main_title} "
+                f"{year_part}"
+            )
+
+    return title
+
 
 def get_genre_movies(
     genre,
@@ -949,8 +970,8 @@ def show_movie_row(
             "movieId"
         ]
 
-        title = str(
-            movie["title"]
+        title = format_movie_title(
+            str(movie["title"])
         )
 
         tmdb_id = movie.get(
@@ -1215,22 +1236,51 @@ if st.session_state.page == "home":
     # RECOMMEND BUTTON
     # ========================================================
 
-    if (
-        st.session_state.selected_movie_id
-        is not None
+if st.button(
+    "✨ Recommend Top 10 Movies",
+    type="primary",
+    use_container_width=True,
+    key="recommend_button"
+):
+
+    # Lock the selected recommendation method
+    st.session_state.selected_recommendation_method = (
+        method
+    )
+
+    st.session_state.results_method = (
+        method
+    )
+
+    # Generate recommendations once
+    with st.spinner(
+        "Generating recommendations..."
     ):
 
-        if st.button(
-            "✨ Recommend Top 10 Movies",
-            type="primary",
-            use_container_width=True,
-            key="recommend_button"
-        ):
+        if method == "🤝 Collaborative Filtering":
 
-            st.session_state.recommend_clicked = True
-            st.session_state.page = "results"
+            recommendations = recommend_cf(
+                st.session_state.selected_movie_id,
+                n=10
+            )
 
-            st.rerun()
+        else:
+
+            recommendations = recommend_content(
+                st.session_state.selected_movie_id,
+                n=10
+            )
+
+    # Save recommendations
+    st.session_state.recommendation_results = (
+        recommendations
+    )
+
+    st.session_state.recommend_clicked = True
+
+    st.session_state.page = "results"
+
+    st.rerun()
 
     # ========================================================
     # HOMEPAGE MOVIE ROWS
@@ -1281,17 +1331,25 @@ if (
         "🏠 Back to Home",
         key="back_to_home"
     ):
-    
-        # Clear selected movie
+
         st.session_state.selected_movie_id = None
-    
-        # Clear recommendation state
+
         st.session_state.recommend_clicked = False
-    
-        # Return to Home
+
+        st.session_state.recommendation_results = None
+
+        st.session_state.selected_recommendation_method = (
+            "🤝 Collaborative Filtering"
+        )
+
+        st.session_state.results_method = (
+            "🤝 Collaborative Filtering"
+        )
+
         st.session_state.page = "home"
-    
+
         st.rerun()
+
     st.divider()
 
     # ========================================================
@@ -1313,61 +1371,40 @@ if (
             selected_matches.iloc[0]
         )
 
+        selected_display_title = format_movie_title(
+            str(selected_movie["title"])
+        )
+
         st.markdown(
-            f"""
-            <div class="selected-card">
+            f"### 🎬 {html.escape(selected_display_title)}"
+        )
 
-                <div class="selected-title">
-                    🎬 {html.escape(
-                        str(selected_movie["title"])
-                    )}
-                </div>
-
-                <div class="selected-genres">
-                    {html.escape(
-                        str(selected_movie["genres"])
-                    )}
-                </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True
+        st.caption(
+            str(selected_movie["genres"])
         )
 
     # ========================================================
-    # GENERATE RECOMMENDATIONS
+    # LOAD SAVED RECOMMENDATIONS
     # ========================================================
 
-    with st.spinner(
-        "Generating recommendations..."
-    ):
+    method = st.session_state.get(
+        "results_method",
+        "🤝 Collaborative Filtering"
+    )
 
-        method = st.session_state.get(
-            "recommendation_method",
-            "🤝 Collaborative Filtering"
+    recommendations = (
+        st.session_state.get(
+            "recommendation_results"
+        )
+    )
+
+    if recommendations is None:
+
+        st.error(
+            "Recommendation results are unavailable."
         )
 
-        # ----------------------------------------------------
-        # Collaborative Filtering
-        # ----------------------------------------------------
-
-        if method == "🤝 Collaborative Filtering":
-
-            recommendations = recommend_cf(
-                selected_movie_id,
-                n=10
-            )
-
-        # ----------------------------------------------------
-        # Content-Based Filtering
-        # ----------------------------------------------------
-
-        else:
-
-            recommendations = recommend_content(
-                selected_movie_id,
-                n=10
-            )
+        st.stop()
 
     # ========================================================
     # FINAL RESULT
@@ -1413,8 +1450,8 @@ if (
                 "movieId"
             ]
 
-            movie_title = str(
-                movie["title"]
+            movie_title = format_movie_title(
+                str(movie["title"])
             )
 
             genres = str(
@@ -1435,7 +1472,6 @@ if (
 
             poster_url = None
             overview = None
-            release_date = ""
 
             if tmdb_movie:
 
@@ -1451,29 +1487,6 @@ if (
                     )
                 )
 
-                if (
-                    tmdb_movie.get(
-                        "_media_type"
-                    )
-                    == "tv"
-                ):
-
-                    release_date = (
-                        tmdb_movie.get(
-                            "first_air_date",
-                            ""
-                        )
-                    )
-
-                else:
-
-                    release_date = (
-                        tmdb_movie.get(
-                            "release_date",
-                            ""
-                        )
-                    )
-
             # ------------------------------------------------
             # CARD
             # ------------------------------------------------
@@ -1488,7 +1501,7 @@ if (
             )
 
             # ------------------------------------------------
-            # Poster
+            # POSTER
             # ------------------------------------------------
 
             with col1:
@@ -1511,7 +1524,7 @@ if (
                     )
 
             # ------------------------------------------------
-            # Information
+            # INFORMATION
             # ------------------------------------------------
 
             with col2:
@@ -1573,7 +1586,7 @@ if (
                     )
 
             # ------------------------------------------------
-            # Details Button
+            # DETAILS BUTTON
             # ------------------------------------------------
 
             with col3:
