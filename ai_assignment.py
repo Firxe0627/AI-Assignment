@@ -155,20 +155,21 @@ st.markdown(
     .netflix-hero {
         position: relative;
         width: 100%;
-        min-height: 430px;
+        height: 520px;
         border-radius: 18px;
         overflow: hidden;
-        margin: 10px 0 30px 0;
+        margin: 10px 0 18px 0;
         background: #11141b;
         border: 1px solid #252b36;
     }
-
+    
     .netflix-hero-background {
         position: absolute;
         inset: 0;
         width: 100%;
         height: 100%;
         object-fit: cover;
+        object-position: center;
     }
 
     .netflix-hero-overlay {
@@ -192,9 +193,9 @@ st.markdown(
     .netflix-hero-content {
         position: relative;
         z-index: 2;
-        min-height: 430px;
-        width: 55%;
-        padding: 80px 0 55px 45px;
+        height: 520px;
+        width: 62%;
+        padding: 70px 0 60px 45px;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -210,7 +211,7 @@ st.markdown(
     }
 
     .netflix-hero-title {
-        font-size: 42px;
+        font-size: 48px;
         line-height: 1.08;
         font-weight: 800;
         color: white;
@@ -227,7 +228,7 @@ st.markdown(
         font-size: 15px;
         line-height: 1.55;
         color: #d5d8de;
-        max-width: 620px;
+        max-width: 560px;
         margin-bottom: 18px;
     }
 
@@ -243,6 +244,13 @@ st.markdown(
             #0e1015
         );
         pointer-events: none;
+    }
+
+    .hero-button-row {
+        margin-top: -65px;
+        position: relative;
+        z-index: 5;
+        margin-bottom: 18px;
     }
 
     .hero-info-label {
@@ -1456,11 +1464,14 @@ def show_hero_movie():
     # ========================================================
     # HERO BUTTONS
     # ========================================================
-
+    st.markdown(
+        '<div class="hero-button-row">',
+        unsafe_allow_html=True
+    )
+    
     hero_col1, hero_col2, hero_col3 = st.columns(
         [1.2, 1.2, 7]
     )
-
     with hero_col1:
 
         if st.button(
@@ -1545,6 +1556,11 @@ def show_hero_movie():
             st.session_state.details_return_page = (
                 "home"
             )
+
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
 
     st.markdown(
         '<div class="hero-info-label">'
