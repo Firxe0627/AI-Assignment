@@ -59,6 +59,57 @@ st.markdown(
         margin-bottom: 12px;
     }
 
+        /* ---------- Netflix Movie Rows ---------- */
+
+    .movie-row {
+        display: flex;
+        gap: 14px;
+        overflow-x: auto;
+        padding: 5px 2px 15px 2px;
+        scrollbar-width: thin;
+    }
+
+    .movie-row::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .movie-row::-webkit-scrollbar-thumb {
+        background: #3a414d;
+        border-radius: 10px;
+    }
+
+    .movie-section-title {
+        font-size: 23px;
+        font-weight: 700;
+        margin-top: 25px;
+        margin-bottom: 10px;
+    }
+
+    .movie-card {
+        min-width: 155px;
+        max-width: 155px;
+    }
+
+    .movie-card img {
+        width: 155px;
+        height: 230px;
+        object-fit: cover;
+        border-radius: 10px;
+    }
+
+    .movie-card-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-top: 7px;
+        line-height: 1.3;
+    }
+
+    .movie-card-year {
+        font-size: 12px;
+        color: #8f96a3;
+        margin-top: 3px;
+    }
+
     .method-description {
         color: #9da3ae;
         font-size: 14px;
@@ -712,6 +763,221 @@ except Exception as e:
     st.stop()
 
 # ============================================================
+# HOMEPAGE MOVIE ROWS
+# ============================================================
+
+def get_year(title):
+
+    title = str(title)
+
+    if "(" in title and ")" in title:
+
+        year = title[-5:-1]
+
+        if year.isdigit():
+            return year
+
+    return ""
+
+
+def get_genre_movies(genre, n=8):
+
+    data = movie_metadata.copy()
+
+    data["genres"] = (
+        data["genres"]
+        .fillna("")
+        .astype(str)
+    )
+
+    matches = data[
+        data["genres"]
+        .str.contains(
+            genre,
+            case=False,
+            regex=False,
+            na=False
+        )
+    ]
+
+    return matches.head(n)
+
+
+def show_movie_row(
+    section_title,
+    movies
+):
+
+    if movies.empty:
+        return
+
+    st.markdown(
+        f"""
+        <div class="movie-section-title">
+            {section_title}
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    columns = st.columns(
+        len(movies)
+    )
+
+    for column, (_, movie) in zip(
+        columns,
+        movies.iterrows()
+    ):
+
+        movie_id = movie["movieId"]
+
+        title = str(
+            movie["title"]
+        )
+
+        tmdb_id = movie.get(
+            "tmdbId"
+        )
+
+        with column:
+
+            # Poster
+            tmdb_movie = get_tmdb_movie(
+                tmdb_id
+            )
+
+            poster_url = None
+
+            if tmdb_movie:
+
+                poster_url = get_poster_url(
+                    tmdb_movie.get(
+                        "poster_path"
+                    )
+                )
+
+            if poster_url:
+
+                st.image(
+                    poster_url,
+                    use_container_width=True
+                )
+
+            else:
+
+                st.markdown(
+                    """
+                    🎬
+
+                    **Poster unavailable**
+                    """
+                )
+
+            st.markdown(
+                f"""
+                <div class="movie-card-title">
+                    {html.escape(title)}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            year = get_year(title)
+
+            if year:
+
+                st.markdown(
+                    f"""
+                    <div class="movie-card-year">
+                        {year}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+            if st.button(
+                "View Details",
+                key=f"home_details_{movie_id}",
+                use_container_width=True
+            ):
+
+                st.session_state.details_movie_id = (
+                    movie_id
+                )
+
+                st.session_state.details_tmdb_id = (
+                    tmdb_id
+                )
+
+                st.session_state.details_title = (
+                    title
+                )
+
+                st.session_state.details_genres = (
+                    str(movie["genres"])
+                )
+
+                st.rerun()
+
+# ============================================================
+# HOMEPAGE MOVIE ROWS
+# ============================================================
+
+featured_movies = (
+    movie_metadata
+    .dropna(subset=["title"])
+    .head(8)
+)
+
+action_movies = get_genre_movies(
+    "Action",
+    8
+)
+
+comedy_movies = get_genre_movies(
+    "Comedy",
+    8
+)
+
+drama_movies = get_genre_movies(
+    "Drama",
+    8
+)
+
+sci_fi_movies = get_genre_movies(
+    "Sci-Fi",
+    8
+)
+
+
+show_movie_row(
+    "⭐ Featured Movies",
+    featured_movies
+)
+
+show_movie_row(
+    "🔥 Action",
+    action_movies
+)
+
+show_movie_row(
+    "😂 Comedy",
+    comedy_movies
+)
+
+show_movie_row(
+    "🎭 Drama",
+    drama_movies
+)
+
+show_movie_row(
+    "👽 Sci-Fi",
+    sci_fi_movies
+)
+
+
+st.divider()
+# ============================================================
 # RECOMMENDATION METHOD
 # ============================================================
 
@@ -1209,47 +1475,47 @@ def show_movie_details():
             )
         )
 
-        if poster:
-
-            st.image(
-                poster,
-                use_container_width=True
-            )
-
-            tmdb_title = tmdb_details.get(
-                "title"
-            )
-            
-            if not tmdb_title:
-            
-                tmdb_title = tmdb_details.get(
-                    "name",
-                    fallback_title
-                )
-            
-            st.subheader(
-                tmdb_title
-            )
-
-            if tmdb_details.get("_media_type") == "tv":
-            
-                release_date = tmdb_details.get(
-                    "first_air_date",
-                    ""
-                )
-            
-            else:
-            
-                release_date = tmdb_details.get(
-                    "release_date",
-                    ""
-                )
-
-        if release_date:
-
-            st.caption(
-                f"Release date: {release_date}"
-            )
+    if poster:
+    
+        st.image(
+            poster,
+            use_container_width=True
+        )
+    
+    tmdb_title = tmdb_details.get(
+        "title"
+    )
+    
+    if not tmdb_title:
+    
+        tmdb_title = tmdb_details.get(
+            "name",
+            fallback_title
+        )
+    
+    st.subheader(
+        tmdb_title
+    )
+    
+    if tmdb_details.get("_media_type") == "tv":
+    
+        release_date = tmdb_details.get(
+            "first_air_date",
+            ""
+        )
+    
+    else:
+    
+        release_date = tmdb_details.get(
+            "release_date",
+            ""
+        )
+    
+    if release_date:
+    
+        st.caption(
+            f"Release date: {release_date}"
+        )
 
         genres_data = (
             tmdb_details.get(
