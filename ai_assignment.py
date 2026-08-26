@@ -148,6 +148,8 @@ st.markdown(
         padding: 30px 0 10px 0;
     }
 
+    
+
     </style>
     """,
     unsafe_allow_html=True
@@ -974,6 +976,10 @@ def show_movie_row(
     if movies.empty:
         return
 
+    # ========================================================
+    # SECTION TITLE
+    # ========================================================
+
     st.markdown(
         f"""
         <div class="movie-section-title">
@@ -983,135 +989,156 @@ def show_movie_row(
         unsafe_allow_html=True
     )
 
-    columns = st.columns(
-        len(movies)
-    )
+    # ========================================================
+    # HORIZONTAL NETFLIX-STYLE CONTAINER
+    # ========================================================
 
-    for column, (_, movie) in zip(
-        columns,
-        movies.iterrows()
+    with st.container(
+        horizontal=True,
+        wrap=False,
+        gap="small"
     ):
 
-        movie_id = int(
-            movie["movieId"]
-        )
+        for _, movie in movies.iterrows():
 
-        title = format_movie_title(
-            str(movie["title"])
-        )
-
-        tmdb_id = movie.get(
-            "tmdbId"
-        )
-
-        genres = str(
-            movie.get(
-                "genres",
-                ""
-            )
-        )
-
-        with column:
-
-            # ------------------------------------------------
-            # Poster
-            # ------------------------------------------------
-
-            tmdb_movie = get_tmdb_movie(
-                tmdb_id
+            movie_id = int(
+                movie["movieId"]
             )
 
-            poster_url = None
+            title = format_movie_title(
+                str(movie["title"])
+            )
 
-            if tmdb_movie:
+            tmdb_id = movie.get(
+                "tmdbId"
+            )
 
-                poster_url = get_poster_url(
-                    tmdb_movie.get(
-                        "poster_path"
-                    )
+            genres = str(
+                movie.get(
+                    "genres",
+                    ""
                 )
-
-            if poster_url:
-
-                st.image(
-                    poster_url,
-                    use_container_width=True
-                )
-
-            else:
-
-                st.markdown(
-                    """
-                    🎬
-
-                    **Poster unavailable**
-                    """
-                )
-
-            # ------------------------------------------------
-            # Title
-            # ------------------------------------------------
-
-            st.markdown(
-                f"""
-                <div class="movie-card-title">
-                    {html.escape(title)}
-                </div>
-                """,
-                unsafe_allow_html=True
             )
 
             # ------------------------------------------------
-            # Year
+            # MOVIE CARD
             # ------------------------------------------------
 
-            year = get_year(
-                title
-            )
-
-            st.markdown(
-                f"""
-                <div class="movie-card-year">
-                    {html.escape(year)}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            # ------------------------------------------------
-            # Details Button
-            # ------------------------------------------------
-
-            if st.button(
-                "View Details",
-                key=(
-                    f"home_details_"
-                    f"{section_title}_"
-                    f"{movie_id}"
-                ),
-                use_container_width=True
+            with st.container(
+                width=155
             ):
 
-                st.session_state.details_movie_id = (
-                    movie_id
-                )
+                # ------------------------------------------------
+                # POSTER
+                # ------------------------------------------------
 
-                st.session_state.details_tmdb_id = (
+                tmdb_movie = get_tmdb_movie(
                     tmdb_id
                 )
 
-                st.session_state.details_title = (
+                poster_url = None
+
+                if tmdb_movie:
+
+                    poster_url = get_poster_url(
+                        tmdb_movie.get(
+                            "poster_path"
+                        )
+                    )
+
+                if poster_url:
+
+                    st.image(
+                        poster_url,
+                        width=155
+                    )
+
+                else:
+
+                    st.markdown(
+                        """
+                        <div style="
+                            width:155px;
+                            height:225px;
+                            background:#151820;
+                            border:1px solid #252b36;
+                            border-radius:7px;
+                            display:flex;
+                            align-items:center;
+                            justify-content:center;
+                            color:#9da3ae;
+                            text-align:center;
+                        ">
+                            🎬<br>
+                            Poster unavailable
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+                # ------------------------------------------------
+                # TITLE
+                # ------------------------------------------------
+
+                st.markdown(
+                    f"""
+                    <div class="movie-card-title">
+                        {html.escape(title)}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+                # ------------------------------------------------
+                # YEAR
+                # ------------------------------------------------
+
+                year = get_year(
                     title
                 )
 
-                st.session_state.details_genres = (
-                    genres
+                st.markdown(
+                    f"""
+                    <div class="movie-card-year">
+                        {html.escape(year)}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
                 )
 
-                st.session_state.details_return_page = (
-                    "home"
-                )
+                # ------------------------------------------------
+                # VIEW DETAILS
+                # ------------------------------------------------
 
+                if st.button(
+                    "View Details",
+                    key=(
+                        f"home_details_"
+                        f"{section_title}_"
+                        f"{movie_id}"
+                    ),
+                    use_container_width=True
+                ):
+
+                    st.session_state.details_movie_id = (
+                        movie_id
+                    )
+
+                    st.session_state.details_tmdb_id = (
+                        tmdb_id
+                    )
+
+                    st.session_state.details_title = (
+                        title
+                    )
+
+                    st.session_state.details_genres = (
+                        genres
+                    )
+
+                    st.session_state.details_return_page = (
+                        "home"
+                    )
                 # Dialog opens at the end of this run; no rerun.
 
 
