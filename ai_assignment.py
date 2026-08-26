@@ -6,6 +6,7 @@ import requests
 import html
 import os
 import re
+import random
 
 from sklearn.metrics.pairwise import cosine_similarity
 from streamlit_searchbox import st_searchbox
@@ -1280,7 +1281,9 @@ def show_hero_movie():
     if featured_movies.empty:
         return
 
-    hero_movie = featured_movies.iloc[0]
+    hero_movie = featured_movies.sample(
+        n=1
+    ).iloc[0]
 
     hero_movie_id = int(
         hero_movie["movieId"]
