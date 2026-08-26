@@ -1102,6 +1102,10 @@ sci_fi_movies = get_genre_movies(
 # HOME PAGE
 # ============================================================
 
+# ============================================================
+# HOME PAGE
+# ============================================================
+
 if st.session_state.page == "home":
 
     # ========================================================
@@ -1152,7 +1156,7 @@ if st.session_state.page == "home":
         )
 
     # ========================================================
-    # SEARCH SECTION
+    # FIND A MOVIE
     # ========================================================
 
     st.divider()
@@ -1208,76 +1212,25 @@ if st.session_state.page == "home":
             pass
 
     # ========================================================
-    # SELECTED MOVIE
+    # RECOMMEND BUTTON
     # ========================================================
 
-    selected_movie_id = (
+    if (
         st.session_state.selected_movie_id
-    )
+        is not None
+    ):
 
-    if selected_movie_id is not None:
+        if st.button(
+            "✨ Recommend Top 10 Movies",
+            type="primary",
+            use_container_width=True,
+            key="recommend_button"
+        ):
 
-        selected_matches = movie_metadata[
-            movie_metadata["movieId"]
-            == selected_movie_id
-        ]
+            st.session_state.recommend_clicked = True
+            st.session_state.page = "results"
 
-        if not selected_matches.empty:
-
-            selected_movie = (
-                selected_matches.iloc[0]
-            )
-
-            selected_title = html.escape(
-                str(
-                    selected_movie["title"]
-                )
-            )
-
-            selected_genres = html.escape(
-                str(
-                    selected_movie["genres"]
-                )
-            )
-
-            st.markdown(
-                '<div class="selected-card">',
-                unsafe_allow_html=True
-            )
-
-            st.markdown(
-                f"""
-                <div class="selected-title">
-                    🎬 {selected_title}
-                </div>
-
-                <div class="selected-genres">
-                    {selected_genres}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-            st.markdown(
-                '</div>',
-                unsafe_allow_html=True
-            )
-
-            # ------------------------------------------------
-            # Recommend Button
-            # ------------------------------------------------
-
-            if st.button(
-                "✨ Recommend Top 10 Movies",
-                type="primary",
-                use_container_width=True,
-                key="recommend_button"
-            ):
-
-                st.session_state.recommend_clicked = True
-                st.session_state.page = "results"
-
-                st.rerun()
+            st.rerun()
 
     # ========================================================
     # HOMEPAGE MOVIE ROWS
@@ -1310,7 +1263,6 @@ if st.session_state.page == "home":
         sci_fi_movies
     )
 
-
 # ============================================================
 # RESULTS PAGE
 # ============================================================
@@ -1329,13 +1281,17 @@ if (
         "🏠 Back to Home",
         key="back_to_home"
     ):
-
-        st.session_state.page = "home"
+    
+        # Clear selected movie
         st.session_state.selected_movie_id = None
+    
+        # Clear recommendation state
         st.session_state.recommend_clicked = False
-
+    
+        # Return to Home
+        st.session_state.page = "home"
+    
         st.rerun()
-
     st.divider()
 
     # ========================================================
