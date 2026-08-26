@@ -895,11 +895,11 @@ def show_movie_row(
                     unsafe_allow_html=True
                 )
 
-            if st.button(
-                "View Details",
-                key=f"home_details_{movie_id}",
-                use_container_width=True
-            ):
+               if st.button(
+                    "View Details",
+                    key=f"home_details_{section_title}_{movie_id}",
+                    use_container_width=True
+                ):
 
                 st.session_state.details_movie_id = (
                     movie_id
@@ -1463,96 +1463,115 @@ def show_movie_details():
     )
 
 
-    # ========================================================
-    # TMDB AVAILABLE
-    # ========================================================
+# ========================================================
+# TMDB AVAILABLE
+# ========================================================
 
-    if tmdb_details:
+if tmdb_details:
 
-        poster = get_poster_url(
-            tmdb_details.get(
-                "poster_path"
-            )
+    poster = get_poster_url(
+        tmdb_details.get(
+            "poster_path"
         )
+    )
 
     if poster:
-    
+
         st.image(
             poster,
             use_container_width=True
         )
-    
+
     tmdb_title = tmdb_details.get(
         "title"
     )
-    
+
     if not tmdb_title:
-    
+
         tmdb_title = tmdb_details.get(
             "name",
             fallback_title
         )
-    
+
     st.subheader(
         tmdb_title
     )
-    
+
     if tmdb_details.get("_media_type") == "tv":
-    
+
         release_date = tmdb_details.get(
             "first_air_date",
             ""
         )
-    
+
     else:
-    
+
         release_date = tmdb_details.get(
             "release_date",
             ""
         )
-    
+
     if release_date:
-    
+
         st.caption(
             f"Release date: {release_date}"
         )
 
-        genres_data = (
-            tmdb_details.get(
-                "genres",
-                []
-            )
+    genres_data = (
+        tmdb_details.get(
+            "genres",
+            []
+        )
+    )
+
+    if genres_data:
+
+        genre_text = ", ".join(
+            genre["name"]
+            for genre in genres_data
         )
 
-        if genres_data:
-
-            genre_text = ", ".join(
-                genre["name"]
-                for genre in genres_data
-            )
-
-            st.caption(
-                f"Genres: {genre_text}"
-            )
-
-        overview = (
-            tmdb_details.get(
-                "overview"
-            )
+        st.caption(
+            f"Genres: {genre_text}"
         )
 
-        if overview:
+    overview = (
+        tmdb_details.get(
+            "overview"
+        )
+    )
 
-            st.write(
-                overview
-            )
+    if overview:
 
-        else:
+        st.write(
+            overview
+        )
 
-            st.info(
-                "Description unavailable."
-            )
+    else:
 
+        st.info(
+            "Description unavailable."
+        )
+
+
+# ========================================================
+# FALLBACK
+# ========================================================
+
+else:
+
+    st.subheader(
+        fallback_title
+    )
+
+    st.caption(
+        f"Genres: {fallback_genres}"
+    )
+
+    st.info(
+        "Additional movie details are "
+        "currently unavailable."
+    )
 
     # ========================================================
     # FALLBACK
