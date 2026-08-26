@@ -148,7 +148,129 @@ st.markdown(
         padding: 30px 0 10px 0;
     }
 
-    
+        /* ========================================================
+       NETFLIX STYLE HERO BANNER
+       ======================================================== */
+
+    .netflix-hero {
+        position: relative;
+        width: 100%;
+        min-height: 430px;
+        border-radius: 18px;
+        overflow: hidden;
+        margin: 10px 0 30px 0;
+        background: #11141b;
+        border: 1px solid #252b36;
+    }
+
+    .netflix-hero-background {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .netflix-hero-overlay {
+        position: absolute;
+        inset: 0;
+        background:
+            linear-gradient(
+                90deg,
+                rgba(10, 12, 16, 0.96) 0%,
+                rgba(10, 12, 16, 0.82) 32%,
+                rgba(10, 12, 16, 0.40) 62%,
+                rgba(10, 12, 16, 0.15) 100%
+            ),
+            linear-gradient(
+                0deg,
+                rgba(10, 12, 16, 0.95) 0%,
+                rgba(10, 12, 16, 0.05) 45%
+            );
+    }
+
+    .netflix-hero-content {
+        position: relative;
+        z-index: 2;
+        min-height: 430px;
+        width: 55%;
+        padding: 80px 0 55px 45px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .netflix-hero-label {
+        font-size: 13px;
+        font-weight: 700;
+        color: #d9dce2;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+    }
+
+    .netflix-hero-title {
+        font-size: 42px;
+        line-height: 1.08;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 12px;
+    }
+
+    .netflix-hero-meta {
+        font-size: 14px;
+        color: #d1d5dc;
+        margin-bottom: 18px;
+    }
+
+    .netflix-hero-overview {
+        font-size: 15px;
+        line-height: 1.55;
+        color: #d5d8de;
+        max-width: 620px;
+        margin-bottom: 18px;
+    }
+
+    .netflix-hero-fade-bottom {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 90px;
+        z-index: 2;
+        background: linear-gradient(
+            transparent,
+            #0e1015
+        );
+        pointer-events: none;
+    }
+
+    .hero-info-label {
+        color: #9da3ae;
+        font-size: 12px;
+        margin-top: 4px;
+    }
+
+    @media (max-width: 900px) {
+
+        .netflix-hero {
+            min-height: 390px;
+        }
+
+        .netflix-hero-content {
+            min-height: 390px;
+            width: 75%;
+            padding: 55px 25px 45px 25px;
+        }
+
+        .netflix-hero-title {
+            font-size: 32px;
+        }
+
+        .netflix-hero-overview {
+            font-size: 13px;
+        }
+    }
 
     </style>
     """,
@@ -1141,7 +1263,299 @@ def show_movie_row(
                     )
                 # Dialog opens at the end of this run; no rerun.
 
+# ============================================================
+# NETFLIX STYLE HERO
+# ============================================================
 
+def show_hero_movie():
+
+    if featured_movies.empty:
+        return
+
+    # --------------------------------------------------------
+    # Use the first featured movie as the hero movie
+    # --------------------------------------------------------
+
+    hero_movie = featured_movies.iloc[0]
+
+    hero_movie_id = int(
+        hero_movie["movieId"]
+    )
+
+    hero_title = format_movie_title(
+        str(hero_movie["title"])
+    )
+
+    hero_genres = str(
+        hero_movie.get(
+            "genres",
+            ""
+        )
+    )
+
+    hero_tmdb_id = hero_movie.get(
+        "tmdbId"
+    )
+
+    # --------------------------------------------------------
+    # Get TMDB information
+    # --------------------------------------------------------
+
+    tmdb_movie = get_tmdb_movie(
+        hero_tmdb_id
+    )
+
+    backdrop_url = None
+    hero_overview = None
+    hero_release_date = ""
+
+    if tmdb_movie:
+
+        backdrop_path = tmdb_movie.get(
+            "backdrop_path"
+        )
+
+        if backdrop_path:
+
+            backdrop_url = (
+                "https://image.tmdb.org/t/p/original"
+                + backdrop_path
+            )
+
+        hero_overview = (
+            tmdb_movie.get(
+                "overview"
+            )
+        )
+
+        hero_release_date = (
+            tmdb_movie.get(
+                "release_date",
+                ""
+            )
+        )
+
+        if not hero_release_date:
+
+            hero_release_date = (
+                tmdb_movie.get(
+                    "first_air_date",
+                    ""
+                )
+            )
+
+    # --------------------------------------------------------
+    # Fallback background
+    # --------------------------------------------------------
+
+    if not backdrop_url:
+
+        backdrop_url = (
+            get_poster_url(
+                tmdb_movie.get("poster_path")
+            )
+            if tmdb_movie
+            else None
+        )
+
+    # --------------------------------------------------------
+    # Hero metadata
+    # --------------------------------------------------------
+
+    hero_year = get_year(
+        hero_title
+    )
+
+    if not hero_year and hero_release_date:
+
+        hero_year = str(
+            hero_release_date
+        )[:4]
+
+    if hero_genres == "nan":
+
+        hero_genres = ""
+
+    if hero_overview:
+
+        hero_overview = str(
+            hero_overview
+        ).strip()
+
+        if len(hero_overview) > 360:
+
+            hero_overview = (
+                hero_overview[:360]
+                + "..."
+            )
+
+    else:
+
+        hero_overview = (
+            "Discover this movie and explore "
+            "similar recommendations."
+        )
+
+    # --------------------------------------------------------
+    # Background
+    # --------------------------------------------------------
+
+    if backdrop_url:
+
+        background_html = f"""
+        <img
+            class="netflix-hero-background"
+            src="{html.escape(backdrop_url)}"
+        >
+        """
+
+    else:
+
+        background_html = ""
+
+    # --------------------------------------------------------
+    # Hero content
+    # --------------------------------------------------------
+
+    st.markdown(
+        f"""
+        <div class="netflix-hero">
+
+            {background_html}
+
+            <div class="netflix-hero-overlay"></div>
+
+            <div class="netflix-hero-content">
+
+                <div class="netflix-hero-label">
+                    ⭐ Featured Movie
+                </div>
+
+                <div class="netflix-hero-title">
+                    {html.escape(hero_title)}
+                </div>
+
+                <div class="netflix-hero-meta">
+                    {html.escape(hero_year)}
+                    {"  •  " if hero_year and hero_genres else ""}
+                    {html.escape(hero_genres)}
+                </div>
+
+                <div class="netflix-hero-overview">
+                    {html.escape(hero_overview)}
+                </div>
+
+            </div>
+
+            <div class="netflix-hero-fade-bottom"></div>
+
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    # --------------------------------------------------------
+    # Hero buttons
+    # --------------------------------------------------------
+
+    hero_col1, hero_col2, hero_col3 = st.columns(
+        [1.2, 1.2, 7]
+    )
+
+    with hero_col1:
+
+        if st.button(
+            "✨ Recommend Similar",
+            key="hero_recommend_button"
+        ):
+
+            # Use the currently selected recommendation
+            # method stored in session state.
+
+            hero_method = st.session_state.get(
+                "selected_recommendation_method",
+                "🤝 Collaborative Filtering"
+            )
+
+            st.session_state.selected_movie_id = (
+                hero_movie_id
+            )
+
+            st.session_state.selected_recommendation_method = (
+                hero_method
+            )
+
+            st.session_state.results_method = (
+                hero_method
+            )
+
+            with st.spinner(
+                "Generating recommendations..."
+            ):
+
+                if hero_method == (
+                    "🤝 Collaborative Filtering"
+                ):
+
+                    hero_recommendations = (
+                        recommend_cf(
+                            hero_movie_id,
+                            n=10
+                        )
+                    )
+
+                else:
+
+                    hero_recommendations = (
+                        recommend_content(
+                            hero_movie_id,
+                            n=10
+                        )
+                    )
+
+            st.session_state.recommendation_results = (
+                hero_recommendations
+            )
+
+            st.session_state.recommend_clicked = True
+
+            st.session_state.page = "results"
+
+            st.rerun()
+
+    with hero_col2:
+
+        if st.button(
+            "ⓘ More Info",
+            key="hero_details_button"
+        ):
+
+            st.session_state.details_movie_id = (
+                hero_movie_id
+            )
+
+            st.session_state.details_tmdb_id = (
+                hero_tmdb_id
+            )
+
+            st.session_state.details_title = (
+                hero_title
+            )
+
+            st.session_state.details_genres = (
+                hero_genres
+            )
+
+            st.session_state.details_return_page = (
+                "home"
+            )
+
+    st.markdown(
+        '<div class="hero-info-label">'
+        'Featured movie selected from the movie dataset'
+        '</div>',
+        unsafe_allow_html=True
+    )
 # ============================================================
 # HOMEPAGE MOVIE DATA
 # ============================================================
@@ -1180,6 +1594,18 @@ sci_fi_movies = get_genre_movies(
 # ============================================================
 
 if st.session_state.page == "home":
+
+    # ========================================================
+    # NETFLIX STYLE HERO
+    # ========================================================
+
+    show_hero_movie()
+
+    # ========================================================
+    # RECOMMENDATION METHOD
+    # ========================================================
+
+    st.divider()
 
     # ========================================================
     # RECOMMENDATION METHOD
