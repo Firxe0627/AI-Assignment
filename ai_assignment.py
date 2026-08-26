@@ -185,15 +185,19 @@ st.markdown(
         <div class="hero-title">
             🎬 Movie Recommendation System
         </div>
-
-        <div class="hero-subtitle">
-            Discover movies using intelligent recommendation techniques
-        </div>
     </div>
     """,
     unsafe_allow_html=True
 )
 
+st.markdown(
+    """
+    <div class="hero-subtitle">
+        Discover movies using intelligent recommendation techniques
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 # ============================================================
 # SESSION STATE
@@ -204,6 +208,9 @@ if "selected_movie_id" not in st.session_state:
 
 if "recommend_clicked" not in st.session_state:
     st.session_state.recommend_clicked = False
+
+if "page" not in st.session_state:
+    st.session_state.page = "home"
 
 if "details_movie_id" not in st.session_state:
     st.session_state.details_movie_id = None
@@ -1091,161 +1098,253 @@ sci_fi_movies = get_genre_movies(
     8
 )
 
-
 # ============================================================
-# HOMEPAGE MOVIE ROWS
-# ============================================================
-
-show_movie_row(
-    "⭐ Featured Movies",
-    featured_movies
-)
-
-show_movie_row(
-    "🔥 Action",
-    action_movies
-)
-
-show_movie_row(
-    "😂 Comedy",
-    comedy_movies
-)
-
-show_movie_row(
-    "🎭 Drama",
-    drama_movies
-)
-
-show_movie_row(
-    "👽 Sci-Fi",
-    sci_fi_movies
-)
-
-
-st.divider()
-
-
-# ============================================================
-# RECOMMENDATION METHOD
+# HOME PAGE
 # ============================================================
 
-st.markdown(
-    '<div class="section-title">'
-    '🧠 Recommendation Method'
-    '</div>',
-    unsafe_allow_html=True
-)
+if st.session_state.page == "home":
 
+    # ========================================================
+    # RECOMMENDATION METHOD
+    # ========================================================
 
-method = st.radio(
-    "Choose how recommendations should be generated:",
-    [
-        "🤝 Collaborative Filtering",
-        "🎯 Content-Based Filtering"
-    ],
-    horizontal=True
-)
-
-
-if method == "🤝 Collaborative Filtering":
+    st.divider()
 
     st.markdown(
-        """
-        <div class="method-description">
-        Recommends movies based on relationships between
-        movies derived from user rating behaviour.
-        </div>
-        """,
+        '<div class="section-title">'
+        '🧠 Recommendation Method'
+        '</div>',
         unsafe_allow_html=True
     )
 
-else:
-
-    st.markdown(
-        """
-        <div class="method-description">
-        Recommends movies based on content similarity using
-        movie genres and user-generated tags.
-        </div>
-        """,
-        unsafe_allow_html=True
+    method = st.radio(
+        "Choose how recommendations should be generated:",
+        [
+            "🤝 Collaborative Filtering",
+            "🎯 Content-Based Filtering"
+        ],
+        horizontal=True,
+        key="recommendation_method"
     )
 
+    if method == "🤝 Collaborative Filtering":
 
-st.divider()
-
-
-# ============================================================
-# SEARCH SECTION
-# ============================================================
-
-st.markdown(
-    '<div class="section-title">'
-    '🔎 Find a Movie'
-    '</div>',
-    unsafe_allow_html=True
-)
-
-
-# ============================================================
-# LIVE AUTOCOMPLETE SEARCH
-# ============================================================
-
-selected_search_movie = st_searchbox(
-    search_movies,
-    placeholder=(
-        "Search for a movie, e.g. Spider-Man, "
-        "Toy Story, Titanic..."
-    ),
-    label=None,
-    key="movie_searchbox",
-    debounce=200,
-    rerun_on_update=True,
-    clear_on_submit=False,
-    edit_after_submit="option"
-)
-
-
-# ============================================================
-# HANDLE MOVIE SELECTION
-# ============================================================
-
-if selected_search_movie is not None:
-
-    try:
-
-        selected_movie_id = int(
-            selected_search_movie
+        st.markdown(
+            """
+            <div class="method-description">
+            Recommends movies based on relationships between
+            movies derived from user rating behaviour.
+            </div>
+            """,
+            unsafe_allow_html=True
         )
 
-        if (
-            selected_movie_id
-            != st.session_state.selected_movie_id
-        ):
+    else:
 
-            st.session_state.selected_movie_id = (
+        st.markdown(
+            """
+            <div class="method-description">
+            Recommends movies based on content similarity using
+            movie genres and user-generated tags.
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+    # ========================================================
+    # SEARCH SECTION
+    # ========================================================
+
+    st.divider()
+
+    st.markdown(
+        '<div class="section-title">'
+        '🔎 Find a Movie'
+        '</div>',
+        unsafe_allow_html=True
+    )
+
+    selected_search_movie = st_searchbox(
+        search_movies,
+        placeholder=(
+            "Search for a movie, e.g. Spider-Man, "
+            "Toy Story, Titanic..."
+        ),
+        label=None,
+        key="movie_searchbox",
+        debounce=200,
+        rerun_on_update=True,
+        clear_on_submit=False,
+        edit_after_submit="option"
+    )
+
+    # ========================================================
+    # HANDLE MOVIE SELECTION
+    # ========================================================
+
+    if selected_search_movie is not None:
+
+        try:
+
+            selected_movie_id = int(
+                selected_search_movie
+            )
+
+            if (
                 selected_movie_id
+                != st.session_state.selected_movie_id
+            ):
+
+                st.session_state.selected_movie_id = (
+                    selected_movie_id
+                )
+
+                st.session_state.recommend_clicked = (
+                    False
+                )
+
+        except Exception:
+
+            pass
+
+    # ========================================================
+    # SELECTED MOVIE
+    # ========================================================
+
+    selected_movie_id = (
+        st.session_state.selected_movie_id
+    )
+
+    if selected_movie_id is not None:
+
+        selected_matches = movie_metadata[
+            movie_metadata["movieId"]
+            == selected_movie_id
+        ]
+
+        if not selected_matches.empty:
+
+            selected_movie = (
+                selected_matches.iloc[0]
             )
 
-            st.session_state.recommend_clicked = (
-                False
+            selected_title = html.escape(
+                str(
+                    selected_movie["title"]
+                )
             )
 
-    except Exception:
+            selected_genres = html.escape(
+                str(
+                    selected_movie["genres"]
+                )
+            )
 
-        pass
+            st.markdown(
+                '<div class="selected-card">',
+                unsafe_allow_html=True
+            )
+
+            st.markdown(
+                f"""
+                <div class="selected-title">
+                    🎬 {selected_title}
+                </div>
+
+                <div class="selected-genres">
+                    {selected_genres}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+            st.markdown(
+                '</div>',
+                unsafe_allow_html=True
+            )
+
+            # ------------------------------------------------
+            # Recommend Button
+            # ------------------------------------------------
+
+            if st.button(
+                "✨ Recommend Top 10 Movies",
+                type="primary",
+                use_container_width=True,
+                key="recommend_button"
+            ):
+
+                st.session_state.recommend_clicked = True
+                st.session_state.page = "results"
+
+                st.rerun()
+
+    # ========================================================
+    # HOMEPAGE MOVIE ROWS
+    # ========================================================
+
+    st.divider()
+
+    show_movie_row(
+        "⭐ Featured Movies",
+        featured_movies
+    )
+
+    show_movie_row(
+        "🔥 Action",
+        action_movies
+    )
+
+    show_movie_row(
+        "😂 Comedy",
+        comedy_movies
+    )
+
+    show_movie_row(
+        "🎭 Drama",
+        drama_movies
+    )
+
+    show_movie_row(
+        "👽 Sci-Fi",
+        sci_fi_movies
+    )
 
 
 # ============================================================
-# SELECTED MOVIE
+# RESULTS PAGE
 # ============================================================
 
-selected_movie_id = (
-    st.session_state.selected_movie_id
-)
+if (
+    st.session_state.page == "results"
+    and st.session_state.recommend_clicked
+    and st.session_state.selected_movie_id is not None
+):
 
+    # ========================================================
+    # BACK TO HOME
+    # ========================================================
 
-if selected_movie_id is not None:
+    if st.button(
+        "🏠 Back to Home",
+        key="back_to_home"
+    ):
+
+        st.session_state.page = "home"
+        st.session_state.selected_movie_id = None
+        st.session_state.recommend_clicked = False
+
+        st.rerun()
+
+    st.divider()
+
+    # ========================================================
+    # SELECTED MOVIE
+    # ========================================================
+
+    selected_movie_id = (
+        st.session_state.selected_movie_id
+    )
 
     selected_matches = movie_metadata[
         movie_metadata["movieId"]
@@ -1258,74 +1357,39 @@ if selected_movie_id is not None:
             selected_matches.iloc[0]
         )
 
-        selected_title = html.escape(
-            str(
-                selected_movie["title"]
-            )
-        )
-
-        selected_genres = html.escape(
-            str(
-                selected_movie["genres"]
-            )
-        )
-
-        st.markdown(
-            '<div class="selected-card">',
-            unsafe_allow_html=True
-        )
-
         st.markdown(
             f"""
-            <div class="selected-title">
-                🎬 {selected_title}
-            </div>
+            <div class="selected-card">
 
-            <div class="selected-genres">
-                {selected_genres}
+                <div class="selected-title">
+                    🎬 {html.escape(
+                        str(selected_movie["title"])
+                    )}
+                </div>
+
+                <div class="selected-genres">
+                    {html.escape(
+                        str(selected_movie["genres"])
+                    )}
+                </div>
+
             </div>
             """,
             unsafe_allow_html=True
         )
 
-        st.markdown(
-            '</div>',
-            unsafe_allow_html=True
-        )
-
-        # ----------------------------------------------------
-        # Recommend Button
-        # ----------------------------------------------------
-
-        if st.button(
-            "✨ Recommend Top 10 Movies",
-            type="primary",
-            use_container_width=True,
-            key="recommend_button"
-        ):
-
-            st.session_state.recommend_clicked = (
-                True
-            )
-
-
-# ============================================================
-# RECOMMENDATIONS
-# ============================================================
-
-if (
-    st.session_state.recommend_clicked
-    and st.session_state.selected_movie_id
-    is not None
-):
-
-    selected_movie_id = (
-        st.session_state.selected_movie_id
-    )
+    # ========================================================
+    # GENERATE RECOMMENDATIONS
+    # ========================================================
 
     with st.spinner(
         "Generating recommendations..."
     ):
+
+        method = st.session_state.get(
+            "recommendation_method",
+            "🤝 Collaborative Filtering"
+        )
 
         # ----------------------------------------------------
         # Collaborative Filtering
@@ -1414,9 +1478,7 @@ if (
             )
 
             poster_url = None
-
             overview = None
-
             release_date = ""
 
             if tmdb_movie:
@@ -1788,14 +1850,4 @@ if (
 # FOOTER
 # ============================================================
 
-st.divider()
 
-st.markdown(
-    """
-    <div class="footer">
-        Movie Recommendation System
-        · Collaborative Filtering & Content-Based Filtering
-    </div>
-    """,
-    unsafe_allow_html=True
-)
