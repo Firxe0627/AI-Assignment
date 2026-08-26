@@ -161,6 +161,9 @@ st.markdown(
 if "selected_movie_id" not in st.session_state:
     st.session_state.selected_movie_id = None
 
+if "searchbox_version" not in st.session_state:
+    st.session_state.searchbox_version = 0
+
 if "recommend_clicked" not in st.session_state:
     st.session_state.recommend_clicked = False
 
@@ -889,10 +892,12 @@ def format_movie_title(title):
     # -> "The Lord of the Rings: The Fellowship of the Ring (2001)"
     # --------------------------------------------------------
 
+    # Normalize whitespace first.
+    title = re.sub(r"\s+", " ", title)
+
     pattern = (
-        r"^(.*),\s+"
-        r"(The|A|An)"
-        r"\s*"
+        r"^(.*?),\s*"
+        r"(The|A|An)\s*"
         r"(\(\d{4}\))$"
     )
 
@@ -1107,7 +1112,7 @@ def show_movie_row(
                     "home"
                 )
 
-                st.rerun()
+                # Dialog opens at the end of this run; no rerun.
 
 
 # ============================================================
@@ -1221,7 +1226,7 @@ if st.session_state.page == "home":
             "Toy Story, Titanic..."
         ),
         label=None,
-        key="movie_searchbox",
+        key=f"movie_searchbox_{st.session_state.searchbox_version}",
         debounce=200,
         rerun_on_update=True,
         clear_on_submit=False,
@@ -1432,25 +1437,58 @@ if (
         key="back_to_home",
         use_container_width=False
     ):
-
-        # Clear recommendation state
-
+    
+        # ========================================================
+        # CLEAR SELECTED MOVIE
+        # ========================================================
+    
         st.session_state.selected_movie_id = None
-
+    
+        # ========================================================
+        # CLEAR RECOMMENDATION RESULTS
+        # ========================================================
+    
         st.session_state.recommend_clicked = False
-
+    
         st.session_state.recommendation_results = None
-
+    
+        # ========================================================
+        # RESET RECOMMENDATION METHOD
+        # ========================================================
+    
         st.session_state.results_method = (
             "🤝 Collaborative Filtering"
         )
-
+    
         st.session_state.selected_recommendation_method = (
             "🤝 Collaborative Filtering"
         )
+    
+        # ========================================================
 
+        # Reset the actual radio widget state too.
+        st.session_state.recommendation_method = (
+            "🤝 Collaborative Filtering"
+        )
+
+        # Clear temporary movie-detail state.
+        st.session_state.details_movie_id = None
+        st.session_state.details_tmdb_id = None
+        st.session_state.details_title = ""
+        st.session_state.details_genres = ""
+        st.session_state.details_return_page = "home"
+
+        # RESET SEARCHBOX
+        # ========================================================
+    
+        st.session_state.searchbox_version += 1
+    
+        # ========================================================
+        # RETURN TO HOME
+        # ========================================================
+    
         st.session_state.page = "home"
-
+    
         st.rerun()
 
     st.divider()
@@ -1742,7 +1780,7 @@ if (
                 # Collaborative and Content-Based results.
 
                 details_key = (
-                    f"recommendation_details_{movie_id}"
+                    f"results_details_{movie_id}"
                 )
 
                 if st.button(
@@ -1774,7 +1812,7 @@ if (
                         "results"
                     )
 
-                    st.rerun()
+                # Dialog opens at the end of this run; no rerun.
 
             st.markdown(
                 '</div>',
