@@ -69,18 +69,23 @@ st.markdown(
     }
 
     .movie-card-title {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         margin-top: 7px;
         line-height: 1.3;
-        min-height: 36px;
+        height: 36px;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
     }
 
     .movie-card-year {
         font-size: 12px;
         color: #8f96a3;
         margin-top: 3px;
-        min-height: 16px;
+        height: 16px;
+        line-height: 16px;
     }
 
     .method-description {
@@ -1545,7 +1550,7 @@ def show_hero_movie():
     )
 
     hero_col1, hero_col2, hero_col3 = st.columns(
-        [1.2, 1.2, 7]
+        [1, 1, 8]
     )
 
     # ========================================================
@@ -1556,7 +1561,8 @@ def show_hero_movie():
 
         if st.button(
             "✨ Recommend Similar",
-            key="hero_recommend_button"
+            key="hero_recommend_button",
+            use_container_width=True
         ):
 
             hero_method = st.session_state.get(
@@ -1618,7 +1624,8 @@ def show_hero_movie():
 
         if st.button(
             "ⓘ More Info",
-            key="hero_details_button"
+            key="hero_details_button",
+            use_container_width=True
         ):
 
             st.session_state.details_movie_id = (
@@ -1813,45 +1820,129 @@ if st.session_state.page == "home":
 
             pass
 
-    # ========================================================
-    # SHOW SELECTED MOVIE
-    # ========================================================
+   # ========================================================
+# SHOW SELECTED MOVIE
+# ========================================================
 
-    if st.session_state.selected_movie_id is not None:
+if st.session_state.selected_movie_id is not None:
 
-        selected_matches = movie_metadata[
-            movie_metadata["movieId"]
-            == st.session_state.selected_movie_id
-        ]
+    selected_matches = movie_metadata[
+        movie_metadata["movieId"]
+        == st.session_state.selected_movie_id
+    ]
 
-        if not selected_matches.empty:
+    if not selected_matches.empty:
 
-            selected_movie = (
-                selected_matches.iloc[0]
+        selected_movie = (
+            selected_matches.iloc[0]
+        )
+
+        selected_title = format_movie_title(
+            str(selected_movie["title"])
+        )
+
+        selected_genres = str(
+            selected_movie.get(
+                "genres",
+                ""
             )
+        )
 
-            selected_title = format_movie_title(
-                str(selected_movie["title"])
-            )
+        selected_tmdb_id = selected_movie.get(
+            "tmdbId"
+        )
 
-            selected_genres = str(
-                selected_movie.get(
-                    "genres",
-                    ""
+        # ------------------------------------------------
+        # GET POSTER
+        # ------------------------------------------------
+
+        selected_tmdb_movie = get_tmdb_movie(
+            selected_tmdb_id
+        )
+
+        selected_poster_url = None
+
+        if selected_tmdb_movie:
+
+            selected_poster_url = get_poster_url(
+                selected_tmdb_movie.get(
+                    "poster_path"
                 )
             )
 
+        # ------------------------------------------------
+        # SELECTED MOVIE CARD
+        # ------------------------------------------------
+
+        st.markdown(
+            '<div class="selected-movie-card">',
+            unsafe_allow_html=True
+        )
+
+        selected_col1, selected_col2 = st.columns(
+            [0.8, 5]
+        )
+
+        # ------------------------------------------------
+        # POSTER
+        # ------------------------------------------------
+
+        with selected_col1:
+
+            if selected_poster_url:
+
+                st.image(
+                    selected_poster_url,
+                    width=85
+                )
+
+            else:
+
+                st.markdown(
+                    """
+                    <div style="
+                        width:85px;
+                        height:125px;
+                        background:#151820;
+                        border:1px solid #252b36;
+                        border-radius:7px;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        color:#9da3ae;
+                        text-align:center;
+                        font-size:11px;
+                    ">
+                        🎬<br>
+                        No Poster
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+        # ------------------------------------------------
+        # TITLE + GENRES
+        # ------------------------------------------------
+
+        with selected_col2:
+
             st.markdown(
-                f'<div class="selected-movie-card">'
-                f'<div class="selected-title">'
-                f'🎬 {html.escape(selected_title)}'
-                f'</div>'
-                f'<div class="selected-genres">'
-                f'{html.escape(selected_genres)}'
-                f'</div>'
-                f'</div>',
+                f"""
+                <div class="selected-title">
+                    🎬 {html.escape(selected_title)}
+                </div>
+
+                <div class="selected-genres">
+                    {html.escape(selected_genres)}
+                </div>
+                """,
                 unsafe_allow_html=True
             )
+
+        st.markdown(
+            '</div>',
+            unsafe_allow_html=True
+        )
 
     # ========================================================
     # RECOMMEND BUTTON
@@ -2036,48 +2127,131 @@ if (
 
     st.divider()
 
-    # ========================================================
-    # SELECTED MOVIE
-    # ========================================================
+# ========================================================
+# SELECTED MOVIE
+# ========================================================
 
-    selected_movie_id = (
-        st.session_state.selected_movie_id
+selected_movie_id = (
+    st.session_state.selected_movie_id
+)
+
+selected_matches = movie_metadata[
+    movie_metadata["movieId"]
+    == selected_movie_id
+]
+
+if not selected_matches.empty:
+
+    selected_movie = (
+        selected_matches.iloc[0]
     )
 
-    selected_matches = movie_metadata[
-        movie_metadata["movieId"]
-        == selected_movie_id
-    ]
+    selected_display_title = format_movie_title(
+        str(selected_movie["title"])
+    )
 
-    if not selected_matches.empty:
-
-        selected_movie = (
-            selected_matches.iloc[0]
+    selected_display_genres = str(
+        selected_movie.get(
+            "genres",
+            ""
         )
+    )
 
-        selected_display_title = format_movie_title(
-            str(selected_movie["title"])
-        )
+    selected_tmdb_id = selected_movie.get(
+        "tmdbId"
+    )
 
-        selected_display_genres = str(
-            selected_movie.get(
-                "genres",
-                ""
+    # ----------------------------------------------------
+    # GET POSTER
+    # ----------------------------------------------------
+
+    selected_tmdb_movie = get_tmdb_movie(
+        selected_tmdb_id
+    )
+
+    selected_poster_url = None
+
+    if selected_tmdb_movie:
+
+        selected_poster_url = get_poster_url(
+            selected_tmdb_movie.get(
+                "poster_path"
             )
         )
 
+    # ----------------------------------------------------
+    # SELECTED MOVIE CARD
+    # ----------------------------------------------------
+
+    st.markdown(
+        '<div class="selected-movie-card">',
+        unsafe_allow_html=True
+    )
+
+    selected_col1, selected_col2 = st.columns(
+        [0.8, 5]
+    )
+
+    # ----------------------------------------------------
+    # POSTER
+    # ----------------------------------------------------
+
+    with selected_col1:
+
+        if selected_poster_url:
+
+            st.image(
+                selected_poster_url,
+                width=85
+            )
+
+        else:
+
+            st.markdown(
+                """
+                <div style="
+                    width:85px;
+                    height:125px;
+                    background:#151820;
+                    border:1px solid #252b36;
+                    border-radius:7px;
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    color:#9da3ae;
+                    text-align:center;
+                    font-size:11px;
+                ">
+                    🎬<br>
+                    No Poster
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+    # ----------------------------------------------------
+    # TITLE + GENRES
+    # ----------------------------------------------------
+
+    with selected_col2:
+
         st.markdown(
-            f'<div class="selected-movie-card">'
-            f'<div class="selected-title">'
-            f'🎬 {html.escape(selected_display_title)}'
-            f'</div>'
-            f'<div class="selected-genres">'
-            f'{html.escape(selected_display_genres)}'
-            f'</div>'
-            f'</div>',
+            f"""
+            <div class="selected-title">
+                🎬 {html.escape(selected_display_title)}
+            </div>
+
+            <div class="selected-genres">
+                {html.escape(selected_display_genres)}
+            </div>
+            """,
             unsafe_allow_html=True
         )
 
+    st.markdown(
+        '</div>',
+        unsafe_allow_html=True
+    )
     # ========================================================
     # LOAD SAVED METHOD
     # ========================================================
