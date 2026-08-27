@@ -1225,7 +1225,7 @@ def show_movie_row(
             # ------------------------------------------------
 
             with st.container(
-                width=155,
+                width=155
             ):
 
                 # ------------------------------------------------
@@ -1250,7 +1250,7 @@ def show_movie_row(
 
                     st.image(
                         poster_url,
-                        width=155
+                        width=155,
                         horizontal_alignment="left"
                     )
 
