@@ -132,8 +132,8 @@ st.markdown(
         border: 1px solid #252b36;
         border-radius: 14px;
         padding: 18px;
-        margin-top: 15px;
-        margin-bottom: 20px;
+        margin-top: 12px;
+        margin-bottom: 10px;
     }
 
     .selected-title {
@@ -143,8 +143,11 @@ st.markdown(
     }
 
     .selected-genres {
-        color: #9da3ae;
+        color: #c5c9d0;
         font-size: 14px;
+        line-height: 1.5;
+        margin-top: 10px;
+        max-width: 900px;
     }
 
     .footer {
@@ -253,16 +256,17 @@ st.markdown(
     }
 
     .hero-button-row {
-        margin-top: -65px;
+        margin-top: -45px;
         position: relative;
         z-index: 5;
-        margin-bottom: 18px;
+        margin-bottom: 10px;
     }
 
-    .hero-info-label {
-        color: #9da3ae;
-        font-size: 12px;
-        margin-top: 4px;
+    .hero-button-row {
+        margin-top: -45px;
+        position: relative;
+        z-index: 5;
+        margin-bottom: 10px;
     }
 
     @media (max-width: 900px) {
@@ -673,9 +677,59 @@ def search_movies(search_text):
             )
         )
 
-        display_text = format_movie_title(
+        tmdb_id = movie.get(
+            "tmdbId"
+        )
+
+        # ----------------------------------------------------
+        # Get TMDB description
+        # ----------------------------------------------------
+
+        tmdb_movie = get_tmdb_movie(
+            tmdb_id
+        )
+
+        description = ""
+
+        if tmdb_movie:
+
+            description = str(
+                tmdb_movie.get(
+                    "overview",
+                    ""
+                )
+            ).strip()
+
+        # ----------------------------------------------------
+        # Format title
+        # ----------------------------------------------------
+
+        display_title = format_movie_title(
             title
         )
+
+        # ----------------------------------------------------
+        # Short description
+        # ----------------------------------------------------
+
+        if description:
+
+            if len(description) > 100:
+
+                description = (
+                    description[:100]
+                    + "..."
+                )
+
+        else:
+
+            description = (
+                "Description unavailable."
+            )
+
+        # ----------------------------------------------------
+        # Search result display
+        # ----------------------------------------------------
 
         if (
             genres
@@ -683,7 +737,16 @@ def search_movies(search_text):
         ):
 
             display_text = (
-                f"{display_text}  ·  {genres}"
+                f"{display_title}"
+                f"  ·  {genres}"
+                f"  ·  {description}"
+            )
+
+        else:
+
+            display_text = (
+                f"{display_title}"
+                f"  ·  {description}"
             )
 
         results.append(
@@ -1133,7 +1196,7 @@ def show_movie_row(
     with st.container(
         horizontal=True,
         wrap=False,
-        gap="small"
+        gap="medium"
     ):
 
         for _, movie in movies.iterrows():
@@ -1188,6 +1251,7 @@ def show_movie_row(
                     st.image(
                         poster_url,
                         width=155
+                        horizontal_alignment="left"
                     )
 
                 else:
@@ -1672,27 +1736,27 @@ featured_movies = (
     .dropna(
         subset=["title"]
     )
-    .head(8)
+    .head(10)
 )
 
 action_movies = get_genre_movies(
     "Action",
-    8
+    10
 )
 
 comedy_movies = get_genre_movies(
     "Comedy",
-    8
+    10
 )
 
 drama_movies = get_genre_movies(
     "Drama",
-    8
+    10
 )
 
 sci_fi_movies = get_genre_movies(
     "Sci-Fi",
-    8
+    10
 )
 
 
@@ -1845,6 +1909,29 @@ if st.session_state.page == "home":
 
             selected_poster_url = None
 
+            selected_overview = None
+
+            if selected_tmdb_movie:
+            
+                selected_poster_url = get_poster_url(
+                    selected_tmdb_movie.get(
+                        "poster_path"
+                    )
+                )
+            
+                selected_overview = (
+                    selected_tmdb_movie.get(
+                        "overview",
+                        ""
+                    )
+                )
+            
+                if selected_overview:
+            
+                    selected_overview = str(
+                        selected_overview
+                    ).strip()
+
             if selected_tmdb_movie:
 
                 selected_poster_url = get_poster_url(
@@ -1906,18 +1993,42 @@ if st.session_state.page == "home":
                     <div class="selected-title">
                         🎬 {html.escape(selected_title)}
                     </div>
-
+            
                     <div class="selected-genres">
                         {html.escape(selected_genres)}
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
-
-            st.markdown(
-                '</div>',
-                unsafe_allow_html=True
-            )
+            
+                if selected_overview:
+            
+                    short_selected_overview = (
+                        selected_overview[:300]
+                        + "..."
+                        if len(selected_overview) > 300
+                        else selected_overview
+                    )
+            
+                    st.markdown(
+                        f"""
+                        <div class="selected-description">
+                            {html.escape(short_selected_overview)}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+            
+                else:
+            
+                    st.markdown(
+                        """
+                        <div class="selected-description">
+                            Description unavailable.
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
 
         # ====================================================
         # RECOMMEND BUTTON
