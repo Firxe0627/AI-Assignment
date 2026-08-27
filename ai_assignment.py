@@ -693,12 +693,11 @@ def search_movies(search_text):
 
         if tmdb_movie:
 
-            description = str(
-                tmdb_movie.get(
-                    "overview",
-                    ""
-                )
-            ).strip()
+            display_text = (
+                f"{display_title}"
+                f"  ·  {genres}"
+                f"  ·  {description}"
+            )
 
         # ----------------------------------------------------
         # Format title
@@ -1195,8 +1194,10 @@ def show_movie_row(
 
     with st.container(
         horizontal=True,
+        horizontal_alignment="left",
+        vertical_alignment="top",
         wrap=False,
-        gap="medium"
+        gap="small"
     ):
 
         for _, movie in movies.iterrows():
@@ -2112,7 +2113,7 @@ elif (
     and st.session_state.recommend_clicked
     and st.session_state.selected_movie_id is not None
 ):
-    
+
     # ========================================================
     # TOP NAVIGATION
     # ========================================================
@@ -2122,188 +2123,196 @@ elif (
         key="back_to_home",
         use_container_width=False
     ):
-    
-        # ========================================================
-        # CLEAR SELECTED MOVIE
-        # ========================================================
-    
-        st.session_state.selected_movie_id = None
 
-        # ========================================================
-        # CLEAR RECOMMENDATION RESULTS
-        # ========================================================
-    
+        st.session_state.selected_movie_id = None
         st.session_state.recommend_clicked = False
-    
         st.session_state.recommendation_results = None
-    
-        # ========================================================
-        # RESET RECOMMENDATION METHOD
-        # ========================================================
-    
+
         st.session_state.results_method = (
             "Collaborative Filtering"
         )
-    
+
         st.session_state.selected_recommendation_method = (
             "Collaborative Filtering"
         )
-    
-        # ========================================================
 
-        # Reset the actual radio widget state too.
         st.session_state.recommendation_method = (
             "Collaborative Filtering"
         )
 
-        # Clear temporary movie-detail state.
         st.session_state.details_movie_id = None
         st.session_state.details_tmdb_id = None
         st.session_state.details_title = ""
         st.session_state.details_genres = ""
         st.session_state.details_return_page = "home"
+
+        st.session_state.searchbox_version += 1
+
         st.session_state.hero_movie_id = None
 
-        # RESET SEARCHBOX
-        # ========================================================
-    
-        st.session_state.searchbox_version += 1
-    
-        # ========================================================
-        # RETURN TO HOME
-        # ========================================================
-    
         st.session_state.page = "home"
-    
+
         st.rerun()
 
-    st.divider()
+    # ========================================================
+    # SELECTED MOVIE
+    # ========================================================
 
-# ========================================================
-# SELECTED MOVIE
-# ========================================================
-
-selected_movie_id = (
-    st.session_state.selected_movie_id
-)
-
-selected_matches = movie_metadata[
-    movie_metadata["movieId"]
-    == selected_movie_id
-]
-
-if not selected_matches.empty:
-
-    selected_movie = (
-        selected_matches.iloc[0]
+    selected_movie_id = (
+        st.session_state.selected_movie_id
     )
 
-    selected_display_title = format_movie_title(
-        str(selected_movie["title"])
-    )
+    selected_matches = movie_metadata[
+        movie_metadata["movieId"]
+        == selected_movie_id
+    ]
 
-    selected_display_genres = str(
-        selected_movie.get(
-            "genres",
-            ""
+    if not selected_matches.empty:
+
+        selected_movie = (
+            selected_matches.iloc[0]
         )
-    )
 
-    selected_tmdb_id = selected_movie.get(
-        "tmdbId"
-    )
+        selected_display_title = format_movie_title(
+            str(selected_movie["title"])
+        )
 
-    # ----------------------------------------------------
-    # GET POSTER
-    # ----------------------------------------------------
-
-    selected_tmdb_movie = get_tmdb_movie(
-        selected_tmdb_id
-    )
-
-    selected_poster_url = None
-
-    if selected_tmdb_movie:
-
-        selected_poster_url = get_poster_url(
-            selected_tmdb_movie.get(
-                "poster_path"
+        selected_display_genres = str(
+            selected_movie.get(
+                "genres",
+                ""
             )
         )
 
-    # ----------------------------------------------------
-    # SELECTED MOVIE CARD
-    # ----------------------------------------------------
+        selected_tmdb_id = selected_movie.get(
+            "tmdbId"
+        )
 
-    st.markdown(
-        '<div class="selected-movie-card">',
-        unsafe_allow_html=True
-    )
+        selected_tmdb_movie = get_tmdb_movie(
+            selected_tmdb_id
+        )
 
-    selected_col1, selected_col2 = st.columns(
-        [0.8, 5]
-    )
+        selected_poster_url = None
+        selected_overview = None
 
-    # ----------------------------------------------------
-    # POSTER
-    # ----------------------------------------------------
+        if selected_tmdb_movie:
 
-    with selected_col1:
-
-        if selected_poster_url:
-
-            st.image(
-                selected_poster_url,
-                width=85
+            selected_poster_url = get_poster_url(
+                selected_tmdb_movie.get(
+                    "poster_path"
+                )
             )
 
-        else:
+            selected_overview = str(
+                selected_tmdb_movie.get(
+                    "overview",
+                    ""
+                )
+            ).strip()
+
+        # ----------------------------------------------------
+        # SELECTED MOVIE CARD
+        # ----------------------------------------------------
+
+        st.markdown(
+            '<div class="selected-movie-card">',
+            unsafe_allow_html=True
+        )
+
+        selected_col1, selected_col2 = st.columns(
+            [0.8, 5]
+        )
+
+        # ----------------------------------------------------
+        # POSTER
+        # ----------------------------------------------------
+
+        with selected_col1:
+
+            if selected_poster_url:
+
+                st.image(
+                    selected_poster_url,
+                    width=85
+                )
+
+            else:
+
+                st.markdown(
+                    """
+                    <div style="
+                        width:85px;
+                        height:125px;
+                        background:#151820;
+                        border:1px solid #252b36;
+                        border-radius:7px;
+                        display:flex;
+                        align-items:center;
+                        justify-content:center;
+                        color:#9da3ae;
+                        text-align:center;
+                        font-size:11px;
+                    ">
+                        🎬<br>
+                        No Poster
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+        # ----------------------------------------------------
+        # INFORMATION
+        # ----------------------------------------------------
+
+        with selected_col2:
 
             st.markdown(
-                """
-                <div style="
-                    width:85px;
-                    height:125px;
-                    background:#151820;
-                    border:1px solid #252b36;
-                    border-radius:7px;
-                    display:flex;
-                    align-items:center;
-                    justify-content:center;
-                    color:#9da3ae;
-                    text-align:center;
-                    font-size:11px;
-                ">
-                    🎬<br>
-                    No Poster
+                f"""
+                <div class="selected-title">
+                    🎬 {html.escape(selected_display_title)}
+                </div>
+
+                <div class="selected-genres">
+                    {html.escape(selected_display_genres)}
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
-    # ----------------------------------------------------
-    # TITLE + GENRES
-    # ----------------------------------------------------
+            if selected_overview:
 
-    with selected_col2:
+                short_selected_overview = (
+                    selected_overview[:300]
+                    + "..."
+                    if len(selected_overview) > 300
+                    else selected_overview
+                )
+
+                st.markdown(
+                    f"""
+                    <div class="recommendation-description">
+                        {html.escape(short_selected_overview)}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+            else:
+
+                st.markdown(
+                    """
+                    <div class="recommendation-description">
+                        Description unavailable.
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
         st.markdown(
-            f"""
-            <div class="selected-title">
-                🎬 {html.escape(selected_display_title)}
-            </div>
-
-            <div class="selected-genres">
-                {html.escape(selected_display_genres)}
-            </div>
-            """,
+            '</div>',
             unsafe_allow_html=True
         )
 
-    st.markdown(
-        '</div>',
-        unsafe_allow_html=True
-    )
     # ========================================================
     # LOAD SAVED METHOD
     # ========================================================
@@ -2312,11 +2321,6 @@ if not selected_matches.empty:
         "results_method",
         "Collaborative Filtering"
     )
-
-    # IMPORTANT:
-    # Do NOT regenerate recommendations here.
-    # The recommendation method is locked when the user
-    # clicked the Recommend button.
 
     recommendations = (
         st.session_state.get(
@@ -2428,7 +2432,8 @@ if not selected_matches.empty:
 
                 overview = (
                     tmdb_movie.get(
-                        "overview"
+                        "overview",
+                        ""
                     )
                 )
 
@@ -2474,14 +2479,6 @@ if not selected_matches.empty:
 
             with col2:
 
-                safe_title = html.escape(
-                    movie_title
-                )
-
-                safe_genres = html.escape(
-                    genres
-                )
-
                 st.markdown(
                     f"""
                     <div class="rank">
@@ -2489,17 +2486,21 @@ if not selected_matches.empty:
                     </div>
 
                     <div class="recommendation-title">
-                        {safe_title}
+                        {html.escape(movie_title)}
                     </div>
 
                     <div class="recommendation-genres">
-                        {safe_genres}
+                        {html.escape(genres)}
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
 
                 if overview:
+
+                    overview = str(
+                        overview
+                    ).strip()
 
                     short_description = (
                         overview[:220]
@@ -2538,18 +2539,9 @@ if not selected_matches.empty:
 
                 st.write("")
 
-                # IMPORTANT:
-                # Method is intentionally NOT used in the key.
-                # This prevents state/key conflicts between
-                # Collaborative and Content-Based results.
-
-                details_key = (
-                    f"results_details_{movie_id}"
-                )
-
                 if st.button(
                     "View Details",
-                    key=details_key,
+                    key=f"results_details_{movie_id}",
                     use_container_width=True
                 ):
 
@@ -2569,20 +2561,14 @@ if not selected_matches.empty:
                         genres
                     )
 
-                    # Remember that the dialog came from
-                    # the Results Page.
-
                     st.session_state.details_return_page = (
                         "results"
                     )
-
-                # Dialog opens at the end of this run; no rerun.
 
             st.markdown(
                 '</div>',
                 unsafe_allow_html=True
             )
-
 
 # ============================================================
 # MOVIE DETAILS DIALOG
