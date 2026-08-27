@@ -262,13 +262,6 @@ st.markdown(
         margin-bottom: 10px;
     }
 
-    .hero-button-row {
-        margin-top: -45px;
-        position: relative;
-        z-index: 5;
-        margin-bottom: 10px;
-    }
-
     @media (max-width: 900px) {
 
         .netflix-hero {
@@ -682,30 +675,31 @@ def search_movies(search_text):
         )
 
         # ----------------------------------------------------
-        # Get TMDB description
-        # ----------------------------------------------------
-
-        tmdb_movie = get_tmdb_movie(
-            tmdb_id
-        )
-
-        description = ""
-
-        if tmdb_movie:
-
-            display_text = (
-                f"{display_title}"
-                f"  ·  {genres}"
-                f"  ·  {description}"
-            )
-
-        # ----------------------------------------------------
         # Format title
         # ----------------------------------------------------
-
+        
         display_title = format_movie_title(
             title
         )
+        
+        # ----------------------------------------------------
+        # Get TMDB description
+        # ----------------------------------------------------
+        
+        tmdb_movie = get_tmdb_movie(
+            tmdb_id
+        )
+        
+        description = ""
+        
+        if tmdb_movie:
+        
+            description = str(
+                tmdb_movie.get(
+                    "overview",
+                    ""
+                )
+            ).strip()
 
         # ----------------------------------------------------
         # Short description
@@ -1251,8 +1245,7 @@ def show_movie_row(
 
                     st.image(
                         poster_url,
-                        width=155,
-                        horizontal_alignment="left"
+                        width=155
                     )
 
                 else:
