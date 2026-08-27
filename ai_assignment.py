@@ -1714,10 +1714,6 @@ if st.session_state.page == "home":
 
     st.divider()
 
-    # ========================================================
-    # RECOMMENDATION METHOD
-    # ========================================================
-
     st.markdown(
         '<div class="section-title">'
         '🧠 Recommendation Method'
@@ -1735,10 +1731,7 @@ if st.session_state.page == "home":
         key="recommendation_method"
     )
 
-    # Keep current method synchronized
-    st.session_state.selected_recommendation_method = (
-        method
-    )
+    st.session_state.selected_recommendation_method = method
 
     if method == "🤝 Collaborative Filtering":
 
@@ -1808,180 +1801,138 @@ if st.session_state.page == "home":
                     selected_movie_id
                 )
 
-                st.session_state.recommend_clicked = (
-                    False
-                )
+                st.session_state.recommend_clicked = False
 
-                st.session_state.recommendation_results = (
-                    None
-                )
+                st.session_state.recommendation_results = None
 
         except Exception:
 
             pass
 
-   # ========================================================
-# SHOW SELECTED MOVIE
-# ========================================================
+    # ========================================================
+    # SHOW SELECTED MOVIE
+    # ========================================================
 
-if st.session_state.selected_movie_id is not None:
+    if st.session_state.selected_movie_id is not None:
 
-    selected_matches = movie_metadata[
-        movie_metadata["movieId"]
-        == st.session_state.selected_movie_id
-    ]
+        selected_matches = movie_metadata[
+            movie_metadata["movieId"]
+            == st.session_state.selected_movie_id
+        ]
 
-    if not selected_matches.empty:
+        if not selected_matches.empty:
 
-        selected_movie = (
-            selected_matches.iloc[0]
-        )
+            selected_movie = selected_matches.iloc[0]
 
-        selected_title = format_movie_title(
-            str(selected_movie["title"])
-        )
-
-        selected_genres = str(
-            selected_movie.get(
-                "genres",
-                ""
+            selected_title = format_movie_title(
+                str(selected_movie["title"])
             )
-        )
 
-        selected_tmdb_id = selected_movie.get(
-            "tmdbId"
-        )
-
-        # ------------------------------------------------
-        # GET POSTER
-        # ------------------------------------------------
-
-        selected_tmdb_movie = get_tmdb_movie(
-            selected_tmdb_id
-        )
-
-        selected_poster_url = None
-
-        if selected_tmdb_movie:
-
-            selected_poster_url = get_poster_url(
-                selected_tmdb_movie.get(
-                    "poster_path"
+            selected_genres = str(
+                selected_movie.get(
+                    "genres",
+                    ""
                 )
             )
 
-        # ------------------------------------------------
-        # SELECTED MOVIE CARD
-        # ------------------------------------------------
+            selected_tmdb_id = selected_movie.get(
+                "tmdbId"
+            )
 
-        st.markdown(
-            '<div class="selected-movie-card">',
-            unsafe_allow_html=True
-        )
+            selected_tmdb_movie = get_tmdb_movie(
+                selected_tmdb_id
+            )
 
-        selected_col1, selected_col2 = st.columns(
-            [0.8, 5]
-        )
+            selected_poster_url = None
 
-        # ------------------------------------------------
-        # POSTER
-        # ------------------------------------------------
+            if selected_tmdb_movie:
 
-        with selected_col1:
-
-            if selected_poster_url:
-
-                st.image(
-                    selected_poster_url,
-                    width=85
+                selected_poster_url = get_poster_url(
+                    selected_tmdb_movie.get(
+                        "poster_path"
+                    )
                 )
 
-            else:
+            # ------------------------------------------------
+            # SELECTED MOVIE CARD
+            # ------------------------------------------------
+
+            st.markdown(
+                '<div class="selected-movie-card">',
+                unsafe_allow_html=True
+            )
+
+            selected_col1, selected_col2 = st.columns(
+                [0.8, 5]
+            )
+
+            with selected_col1:
+
+                if selected_poster_url:
+
+                    st.image(
+                        selected_poster_url,
+                        width=85
+                    )
+
+                else:
+
+                    st.markdown(
+                        """
+                        <div style="
+                            width:85px;
+                            height:125px;
+                            background:#151820;
+                            border:1px solid #252b36;
+                            border-radius:7px;
+                            display:flex;
+                            align-items:center;
+                            justify-content:center;
+                            color:#9da3ae;
+                            text-align:center;
+                            font-size:11px;
+                        ">
+                            🎬<br>
+                            No Poster
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+
+            with selected_col2:
 
                 st.markdown(
-                    """
-                    <div style="
-                        width:85px;
-                        height:125px;
-                        background:#151820;
-                        border:1px solid #252b36;
-                        border-radius:7px;
-                        display:flex;
-                        align-items:center;
-                        justify-content:center;
-                        color:#9da3ae;
-                        text-align:center;
-                        font-size:11px;
-                    ">
-                        🎬<br>
-                        No Poster
+                    f"""
+                    <div class="selected-title">
+                        🎬 {html.escape(selected_title)}
+                    </div>
+
+                    <div class="selected-genres">
+                        {html.escape(selected_genres)}
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
 
-        # ------------------------------------------------
-        # TITLE + GENRES
-        # ------------------------------------------------
-
-        with selected_col2:
-
             st.markdown(
-                f"""
-                <div class="selected-title">
-                    🎬 {html.escape(selected_title)}
-                </div>
-
-                <div class="selected-genres">
-                    {html.escape(selected_genres)}
-                </div>
-                """,
+                '</div>',
                 unsafe_allow_html=True
             )
 
-        st.markdown(
-            '</div>',
-            unsafe_allow_html=True
-        )
+        # ====================================================
+        # RECOMMEND BUTTON
+        # ====================================================
 
-    # ========================================================
-    # RECOMMEND BUTTON
-    # ========================================================
+        if st.button(
+            "✨ Recommend Top 10 Movies",
+            type="primary",
+            use_container_width=True,
+            key="recommend_button"
+        ):
 
-    if st.button(
-        "✨ Recommend Top 10 Movies",
-        type="primary",
-        use_container_width=True,
-        key="recommend_button"
-    ):
+            st.session_state.selected_recommendation_method = method
 
-        # ----------------------------------------------------
-        # Validate selection
-        # ----------------------------------------------------
-
-        if st.session_state.selected_movie_id is None:
-
-            st.warning(
-                "Please search and select a movie first."
-            )
-
-        else:
-
-            # ------------------------------------------------
-            # LOCK METHOD
-            # ------------------------------------------------
-
-            st.session_state.selected_recommendation_method = (
-                method
-            )
-
-            st.session_state.results_method = (
-                method
-            )
-
-            # ------------------------------------------------
-            # GENERATE RECOMMENDATIONS
-            # ------------------------------------------------
+            st.session_state.results_method = method
 
             with st.spinner(
                 "Generating recommendations..."
@@ -2001,19 +1952,9 @@ if st.session_state.selected_movie_id is not None:
                         n=10
                     )
 
-            # ------------------------------------------------
-            # SAVE RESULTS
-            # ------------------------------------------------
-
-            st.session_state.recommendation_results = (
-                recommendations
-            )
+            st.session_state.recommendation_results = recommendations
 
             st.session_state.recommend_clicked = True
-
-            # ------------------------------------------------
-            # GO TO RESULTS PAGE
-            # ------------------------------------------------
 
             st.session_state.page = "results"
 
@@ -2055,12 +1996,12 @@ if st.session_state.selected_movie_id is not None:
 # RESULTS PAGE
 # ============================================================
 
-if (
+elif (
     st.session_state.page == "results"
     and st.session_state.recommend_clicked
     and st.session_state.selected_movie_id is not None
 ):
-
+    
     # ========================================================
     # TOP NAVIGATION
     # ========================================================
