@@ -307,7 +307,7 @@ if "recommend_clicked" not in st.session_state:
 
 if "selected_recommendation_method" not in st.session_state:
     st.session_state.selected_recommendation_method = (
-        "🤝 Collaborative Filtering"
+        "Collaborative Filtering"
     )
 
 if "recommendation_results" not in st.session_state:
@@ -315,7 +315,7 @@ if "recommendation_results" not in st.session_state:
 
 if "results_method" not in st.session_state:
     st.session_state.results_method = (
-        "🤝 Collaborative Filtering"
+        "Collaborative Filtering"
     )
 
 if "page" not in st.session_state:
@@ -1567,7 +1567,7 @@ def show_hero_movie():
 
             hero_method = st.session_state.get(
                 "selected_recommendation_method",
-                "🤝 Collaborative Filtering"
+                "Collaborative Filtering"
             )
 
             st.session_state.selected_movie_id = (
@@ -1587,7 +1587,7 @@ def show_hero_movie():
             ):
 
                 if hero_method == (
-                    "🤝 Collaborative Filtering"
+                    "Collaborative Filtering"
                 ):
 
                     hero_recommendations = (
@@ -1716,7 +1716,7 @@ if st.session_state.page == "home":
 
     st.markdown(
         '<div class="section-title">'
-        '🧠 Recommendation Method'
+        'Recommendation Method'
         '</div>',
         unsafe_allow_html=True
     )
@@ -1724,8 +1724,8 @@ if st.session_state.page == "home":
     method = st.radio(
         "Choose how recommendations should be generated:",
         [
-            "🤝 Collaborative Filtering",
-            "🎯 Content-Based Filtering"
+            "Collaborative Filtering",
+            "Content-Based Filtering"
         ],
         horizontal=True,
         key="recommendation_method"
@@ -1733,7 +1733,7 @@ if st.session_state.page == "home":
 
     st.session_state.selected_recommendation_method = method
 
-    if method == "🤝 Collaborative Filtering":
+    if method == "Collaborative Filtering":
 
         st.markdown(
             '<div class="method-description">'
@@ -1938,7 +1938,7 @@ if st.session_state.page == "home":
                 "Generating recommendations..."
             ):
 
-                if method == "🤝 Collaborative Filtering":
+                if method == "Collaborative Filtering":
 
                     recommendations = recommend_cf(
                         st.session_state.selected_movie_id,
@@ -2031,18 +2031,18 @@ elif (
         # ========================================================
     
         st.session_state.results_method = (
-            "🤝 Collaborative Filtering"
+            "Collaborative Filtering"
         )
     
         st.session_state.selected_recommendation_method = (
-            "🤝 Collaborative Filtering"
+            "Collaborative Filtering"
         )
     
         # ========================================================
 
         # Reset the actual radio widget state too.
         st.session_state.recommendation_method = (
-            "🤝 Collaborative Filtering"
+            "Collaborative Filtering"
         )
 
         # Clear temporary movie-detail state.
@@ -2199,7 +2199,7 @@ if not selected_matches.empty:
 
     method = st.session_state.get(
         "results_method",
-        "🤝 Collaborative Filtering"
+        "Collaborative Filtering"
     )
 
     # IMPORTANT:
@@ -2225,7 +2225,7 @@ if not selected_matches.empty:
     # SHOW METHOD USED
     # ========================================================
 
-    if method == "🤝 Collaborative Filtering":
+    if method == "Collaborative Filtering":
 
         st.caption(
             "Recommendation method: Collaborative Filtering"
